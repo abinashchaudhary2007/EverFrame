@@ -2643,3 +2643,172 @@ ul, ol {
 @keyframes pageIn {
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* =====================================================
+   MOBILE RESPONSIVE — Comprehensive overrides
+   ===================================================== */
+
+/* ---------- Base touch improvements ---------- */
+@media (max-width: 768px) {
+  /* Prevent horizontal overflow */
+  html, body {
+    overflow-x: hidden;
+  }
+
+  /* Larger tap targets for buttons */
+  .btn {
+    min-height: 44px;
+  }
+
+  /* Section heading smaller on mobile */
+  .section-heading {
+    font-size: clamp(22px, 6vw, 32px);
+  }
+
+  /* Announcement bar smaller text */
+  .announcement-bar {
+    font-size: 11px;
+    padding: 0 8px;
+    letter-spacing: 0.02em;
+  }
+
+  /* ---------- HERO ---------- */
+  .hero-content {
+    width: 100%;
+    padding: 24px 16px 56px;
+    justify-content: flex-end;
+  }
+  .hero-heading { font-size: clamp(22px, 7vw, 34px); }
+  .hero-sub { font-size: 13.5px; margin-bottom: 20px; }
+  .hero-content .btn { font-size: 13px; padding: 10px 20px; }
+
+  /* ---------- SHOP PAGE ---------- */
+  .shop-page { padding: 24px 0 60px; }
+  .shop-title { font-size: 26px; }
+  .shop-toolbar { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .category-filters { gap: 6px; }
+  .filter-chip { padding: 7px 14px; font-size: 12px; }
+  .sort-select { width: 100%; }
+
+  /* ---------- PRODUCT DETAIL ---------- */
+  .product-detail { padding: 24px 0 60px; }
+  .breadcrumb { font-size: 12px; flex-wrap: wrap; }
+  .detail-price { font-size: 24px; }
+  .product-actions { flex-direction: column; gap: 10px; }
+  .product-actions .btn { flex: unset; width: 100%; }
+  .gallery-thumb { width: 60px; height: 60px; }
+
+  /* ---------- CART ---------- */
+  .cart-page { padding: 24px 0 60px; }
+  .cart-item { gap: 12px; }
+  .cart-item-image { width: 72px; height: 72px; }
+  .cart-item-name { font-size: 14px; }
+  .cart-summary { position: static; padding: 20px; }
+
+  /* ---------- CHECKOUT ---------- */
+  .checkout-page { padding: 24px 0 60px; }
+  .checkout-section { padding: 20px 16px; }
+  .checkout-section-title { font-size: 17px; }
+  .cart-summary-title { font-size: 18px; }
+
+  /* ---------- TRACKING PAGE ---------- */
+  .tracking-page { padding: 40px 0 60px; }
+  .tracking-card { padding: 20px 16px; }
+  .tracking-input-row { flex-direction: column; gap: 10px; margin-bottom: 24px; }
+  .tracking-input-row input { width: 100%; }
+  .tracking-input-row .btn { width: 100%; }
+
+  /* ---------- ACCOUNT PAGE ---------- */
+  .account-page { padding: 24px 0 60px; }
+  .account-sidebar { position: static; padding: 20px; }
+  .account-content { padding: 20px 16px; }
+  .account-avatar { width: 52px; height: 52px; font-size: 20px; }
+
+  /* ---------- ADMIN PAGE ---------- */
+  .account-grid { gap: 16px; }
+
+  /* ---------- AUTH PAGES ---------- */
+  .auth-page { padding: 24px 16px; align-items: flex-start; }
+  .auth-card { padding: 28px 20px; }
+  .auth-title { font-size: 24px; }
+
+  /* ---------- CUSTOM FRAME BUILDER ---------- */
+  .frame-builder { padding: 24px 0 60px; }
+  .preview-area { position: static; }
+  .frame-options { grid-template-columns: repeat(2, 1fr); }
+
+  /* ---------- PROCESS SECTION ---------- */
+  .process-section { padding: 64px 0; }
+
+  /* ---------- GIFTS SECTION ---------- */
+  .gifts-section { padding: 64px 0; }
+  .gifts-grid { grid-template-columns: 1fr 1fr; gap: 14px; }
+  .gift-card { padding: 24px 16px; }
+  .gift-icon { font-size: 32px; margin-bottom: 12px; }
+  .gift-title { font-size: 16px; }
+
+  /* ---------- FOOTER ---------- */
+  .footer { padding: 56px 0 0; }
+  .footer-bottom { flex-direction: column; text-align: center; gap: 10px; }
+  .footer-payment { justify-content: center; flex-wrap: wrap; }
+
+  /* ---------- SECTION HEADERS ---------- */
+  .section-header { margin-bottom: 32px; }
+
+  /* ---------- CUSTOM FRAME SECTION (home) ---------- */
+  .custom-frame-section { padding: 56px 0; }
+  .step-item { padding: 12px 14px; }
+  .step-item.active { transform: translateX(4px); }
+
+  /* ---------- EMPTY STATES ---------- */
+  .empty-state { padding: 48px 16px; }
+  .empty-state-icon { font-size: 44px; }
+}
+
+/* ---------- Small phones (max 480px) ---------- */
+@media (max-width: 480px) {
+  /* Navbar */
+  .navbar-logo-img { width: 40px; height: 40px; }
+  .navbar-icon-btn { width: 36px; height: 36px; }
+
+  /* Section heading */
+  .section-heading { font-size: clamp(20px, 7vw, 28px); }
+
+  /* Product grid stays 2-col but tighter */
+  .product-grid { gap: 10px; }
+  .product-card-body { padding: 12px; }
+  .product-name { font-size: 13.5px; }
+  .price-current { font-size: 14.5px; }
+
+  /* Checkout padding */
+  .checkout-section { padding: 16px 12px; }
+
+  /* Cart item tighter */
+  .cart-item-image { width: 60px; height: 60px; }
+
+  /* Gifts grid 1 col on tiny screens */
+  .gifts-grid { grid-template-columns: 1fr; }
+
+  /* Auth card full-width */
+  .auth-card { border-radius: var(--radius-md); }
+
+  /* Tracking card */
+  .tracking-card { padding: 16px 12px; border-radius: var(--radius-md); }
+
+  /* Account content */
+  .account-content { padding: 16px 12px; }
+
+  /* Admin coupon form grid */
+  .form-row { grid-template-columns: 1fr; }
+
+  /* Hero buttons stack */
+  .hero-content .btn { width: 100%; justify-content: center; }
+
+  /* Mobile menu larger tap targets */
+  .mobile-menu a { padding: 16px 14px; font-size: 15px; }
+
+  /* Summary rows tighter */
+  .summary-row { font-size: 13.5px; }
+  .summary-row.total { font-size: 15px; }
+}
+
