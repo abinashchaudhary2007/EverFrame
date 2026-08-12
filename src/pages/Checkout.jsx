@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { CheckCircle } from 'lucide-react';
+import { CheckCircle, Tag, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import CopyButton from '../components/ui/CopyButton';
-import { createOrder } from '../services/api';
+import { createOrder, validateCoupon, incrementCouponUsage } from '../services/api';
 
 const PAYMENT_METHODS = [
   { id: 'cod', label: 'Cash on Delivery', icon: '💵' },
@@ -28,6 +28,12 @@ export default function Checkout() {
   });
   const [errors, setErrors] = useState({});
 
+  // Coupon state
+  const [couponInput, setCouponInput] = useState('');
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [appliedCoupon, setAppliedCoupon] = useState(null); // { code, discount, discount_type, discount_value }
+  const [couponError, setCouponError] = useState('');
+
   // Pre-fill form with logged-in user details
   useEffect(() => {
     if (authUser) {
@@ -44,7 +50,33 @@ export default function Checkout() {
   }, [authUser]);
 
   const DELIVERY_CHARGE = subtotal >= 2000 ? 0 : 150;
-  const total = subtotal + DELIVERY_CHARGE;
+  const discountAmount = appliedCoupon ? appliedCoupon.discount : 0;
+  const total = Math.max(0, subtotal + DELIVERY_CHARGE - discountAmount);
+
+  const handleApplyCoupon = async () => {
+    if (!couponInput.trim()) { setCouponError('Please enter a coupon code'); return; }
+    setCouponLoading(true);
+    setCouponError('');
+    const result = await validateCoupon(couponInput, subtotal);
+    setCouponLoading(false);
+    if (result.valid) {
+      setAppliedCoupon({ code: couponInput.trim().toUpperCase(), discount: result.discount, discount_type: result.coupon.discount_type, discount_value: result.coupon.discount_value });
+      setCouponError('');
+      toast.success(`Coupon applied! You save NPR ${result.discount.toLocaleString()} 🎉`, {
+        position: 'bottom-right',
+        style: { background: '#16a34a', color: '#fff', borderRadius: '8px' },
+      });
+    } else {
+      setAppliedCoupon(null);
+      setCouponError(result.error);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponInput('');
+    setCouponError('');
+  };
 
   const validate = () => {
     const errs = {};
@@ -90,9 +122,16 @@ export default function Checkout() {
       paymentMethod,
       subtotal,
       deliveryCharge: DELIVERY_CHARGE,
+      discountAmount,
+      couponCode: appliedCoupon?.code || null,
       total,
       items: cartItems,
     });
+
+    // Increment coupon usage after successful order
+    if (appliedCoupon?.code) {
+      await incrementCouponUsage(appliedCoupon.code);
+    }
 
     setLoading(false);
     setPlacedOrderNum(res.orderNumber);
@@ -232,6 +271,66 @@ export default function Checkout() {
                     {DELIVERY_CHARGE === 0 ? 'FREE' : `NPR ${DELIVERY_CHARGE}`}
                   </span>
                 </div>
+
+                {/* Coupon Input */}
+                <div style={{ margin: '12px 0', padding: '12px', background: 'var(--color-surface)', borderRadius: '10px', border: '1px dashed var(--color-border)' }}>
+                  {!appliedCoupon ? (
+                    <>
+                      <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-dark)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <Tag size={13} /> Have a coupon?
+                      </div>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <input
+                          type="text"
+                          placeholder="Enter code (e.g. SAVE10)"
+                          value={couponInput}
+                          onChange={e => { setCouponInput(e.target.value.toUpperCase()); setCouponError(''); }}
+                          onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleApplyCoupon())}
+                          style={{ flex: 1, padding: '8px 10px', border: '1.5px solid var(--color-border)', borderRadius: '8px', fontSize: '12.5px', fontFamily: 'monospace', fontWeight: 700, letterSpacing: '0.05em', outline: 'none', background: '#fff' }}
+                        />
+                        <button
+                          type="button"
+                          className="btn btn-primary"
+                          style={{ padding: '8px 14px', fontSize: '12px', flexShrink: 0 }}
+                          onClick={handleApplyCoupon}
+                          disabled={couponLoading}
+                        >
+                          {couponLoading ? '...' : 'Apply'}
+                        </button>
+                      </div>
+                      {couponError && (
+                        <div style={{ marginTop: '6px', fontSize: '11.5px', color: '#E11D48', fontWeight: 500 }}>{couponError}</div>
+                      )}
+                    </>
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+                          <Tag size={13} color="#16a34a" />
+                          <span style={{ fontSize: '12.5px', fontWeight: 800, color: '#16a34a', fontFamily: 'monospace', letterSpacing: '0.05em' }}>{appliedCoupon.code}</span>
+                          <span style={{ fontSize: '11px', background: '#dcfce7', color: '#16a34a', padding: '1px 7px', borderRadius: '20px', fontWeight: 700 }}>Applied</span>
+                        </div>
+                        <div style={{ fontSize: '11.5px', color: 'var(--color-text-muted)' }}>
+                          {appliedCoupon.discount_type === 'percentage'
+                            ? `${appliedCoupon.discount_value}% off`
+                            : `NPR ${appliedCoupon.discount_value} off`
+                          }
+                        </div>
+                      </div>
+                      <button type="button" onClick={handleRemoveCoupon} style={{ color: '#E11D48', background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }} title="Remove coupon">
+                        <X size={16} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {discountAmount > 0 && (
+                  <div className="summary-row" style={{ color: '#16a34a', fontWeight: 700 }}>
+                    <span>Discount ({appliedCoupon?.code})</span>
+                    <span>− NPR {discountAmount.toLocaleString()}</span>
+                  </div>
+                )}
+
                 <div className="summary-row total">
                   <span>Total</span>
                   <span>NPR {total.toLocaleString()}</span>
@@ -240,7 +339,7 @@ export default function Checkout() {
                   type="submit"
                   className="btn btn-primary btn-full btn-lg"
                   disabled={loading}
-                  style={{ opacity: loading ? 0.7 : 1 }}
+                  style={{ opacity: loading ? 0.7 : 1, marginTop: '4px' }}
                 >
                   {loading ? 'Placing Order...' : `Place Order — NPR ${total.toLocaleString()}`}
                 </button>

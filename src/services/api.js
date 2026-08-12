@@ -341,3 +341,170 @@ export async function uploadCustomPhoto(file) {
     return { url: URL.createObjectURL(file), source: 'local' };
   }
 }
+
+// =====================================================
+// COUPON FUNCTIONS
+// =====================================================
+
+// Validate a coupon code against cart total
+export async function validateCoupon(code, cartTotal) {
+  if (!code || !code.trim()) return { valid: false, error: 'Enter a coupon code' };
+  const cleanCode = code.trim().toUpperCase();
+
+  // Offline fallback — check localStorage coupons
+  if (!isSupabaseConfigured || !supabase) {
+    try {
+      const local = JSON.parse(localStorage.getItem('everframe_coupons') || '[]');
+      const coupon = local.find(c => c.code === cleanCode);
+      if (!coupon) return { valid: false, error: 'Invalid coupon code' };
+      if (!coupon.is_active) return { valid: false, error: 'This coupon is no longer active' };
+      if (coupon.expires_at && new Date(coupon.expires_at) < new Date()) return { valid: false, error: 'This coupon has expired' };
+      if (coupon.max_uses !== null && coupon.usage_count >= coupon.max_uses) return { valid: false, error: 'This coupon has reached its usage limit' };
+      if (cartTotal < coupon.min_order_amount) return { valid: false, error: `Minimum order of NPR ${coupon.min_order_amount.toLocaleString()} required` };
+      const discount = coupon.discount_type === 'percentage'
+        ? Math.round((cartTotal * coupon.discount_value) / 100)
+        : Math.min(coupon.discount_value, cartTotal);
+      return { valid: true, coupon, discount };
+    } catch {
+      return { valid: false, error: 'Could not validate coupon' };
+    }
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('coupons')
+      .select('*')
+      .ilike('code', cleanCode)
+      .maybeSingle();
+
+    if (error || !data) return { valid: false, error: 'Invalid coupon code' };
+    if (!data.is_active) return { valid: false, error: 'This coupon is no longer active' };
+    if (data.expires_at && new Date(data.expires_at) < new Date()) return { valid: false, error: 'This coupon has expired' };
+    if (data.max_uses !== null && data.usage_count >= data.max_uses) return { valid: false, error: 'This coupon has reached its usage limit' };
+    if (cartTotal < data.min_order_amount) return { valid: false, error: `Minimum order of NPR ${data.min_order_amount.toLocaleString()} required` };
+
+    const discount = data.discount_type === 'percentage'
+      ? Math.round((cartTotal * data.discount_value) / 100)
+      : Math.min(data.discount_value, cartTotal);
+
+    return { valid: true, coupon: data, discount };
+  } catch (err) {
+    console.error('Validate Coupon Error:', err);
+    return { valid: false, error: 'Could not validate coupon. Please try again.' };
+  }
+}
+
+// Increment coupon usage count after order is placed
+export async function incrementCouponUsage(code) {
+  if (!code || !isSupabaseConfigured || !supabase) return;
+  const cleanCode = code.trim().toUpperCase();
+  try {
+    // Read current usage_count then increment
+    const { data } = await supabase
+      .from('coupons')
+      .select('usage_count')
+      .ilike('code', cleanCode)
+      .maybeSingle();
+    if (data) {
+      await supabase
+        .from('coupons')
+        .update({ usage_count: (data.usage_count || 0) + 1 })
+        .ilike('code', cleanCode);
+    }
+  } catch (err) {
+    console.error('Increment Coupon Usage Error:', err);
+  }
+}
+
+// Fetch all coupons (Admin)
+export async function getAllCoupons() {
+  if (!isSupabaseConfigured || !supabase) {
+    try {
+      return JSON.parse(localStorage.getItem('everframe_coupons') || '[]');
+    } catch { return []; }
+  }
+  try {
+    const { data, error } = await supabase
+      .from('coupons')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  } catch (err) {
+    console.error('Get All Coupons Error:', err);
+    return [];
+  }
+}
+
+// Create a new coupon (Admin)
+export async function createCoupon(couponData) {
+  const payload = {
+    code: couponData.code.trim().toUpperCase(),
+    discount_type: couponData.discount_type,
+    discount_value: parseFloat(couponData.discount_value),
+    min_order_amount: parseFloat(couponData.min_order_amount) || 0,
+    max_uses: couponData.max_uses ? parseInt(couponData.max_uses) : null,
+    is_active: true,
+    expires_at: couponData.expires_at || null,
+  };
+
+  if (!isSupabaseConfigured || !supabase) {
+    try {
+      const local = JSON.parse(localStorage.getItem('everframe_coupons') || '[]');
+      const newCoupon = { ...payload, id: Date.now().toString(), usage_count: 0, created_at: new Date().toISOString() };
+      localStorage.setItem('everframe_coupons', JSON.stringify([newCoupon, ...local]));
+      return { success: true, coupon: newCoupon };
+    } catch { return { success: false, error: 'Failed to create coupon' }; }
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('coupons')
+      .insert([payload])
+      .select()
+      .single();
+    if (error) throw error;
+    return { success: true, coupon: data };
+  } catch (err) {
+    console.error('Create Coupon Error:', err);
+    const msg = err?.message?.includes('unique') ? 'Coupon code already exists' : 'Failed to create coupon';
+    return { success: false, error: msg };
+  }
+}
+
+// Toggle coupon active/inactive (Admin)
+export async function toggleCoupon(id, isActive) {
+  if (!isSupabaseConfigured || !supabase) {
+    try {
+      const local = JSON.parse(localStorage.getItem('everframe_coupons') || '[]');
+      const updated = local.map(c => c.id === id ? { ...c, is_active: isActive } : c);
+      localStorage.setItem('everframe_coupons', JSON.stringify(updated));
+      return true;
+    } catch { return false; }
+  }
+  try {
+    await supabase.from('coupons').update({ is_active: isActive }).eq('id', id);
+    return true;
+  } catch (err) {
+    console.error('Toggle Coupon Error:', err);
+    return false;
+  }
+}
+
+// Delete a coupon (Admin)
+export async function deleteCoupon(id) {
+  if (!isSupabaseConfigured || !supabase) {
+    try {
+      const local = JSON.parse(localStorage.getItem('everframe_coupons') || '[]');
+      localStorage.setItem('everframe_coupons', JSON.stringify(local.filter(c => c.id !== id)));
+      return true;
+    } catch { return false; }
+  }
+  try {
+    await supabase.from('coupons').delete().eq('id', id);
+    return true;
+  } catch (err) {
+    console.error('Delete Coupon Error:', err);
+    return false;
+  }
+}

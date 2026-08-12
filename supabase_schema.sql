@@ -124,6 +124,14 @@ CREATE POLICY "Allow public order selection" ON public.orders FOR SELECT USING (
 DROP POLICY IF EXISTS "Allow public order_items insertion" ON public.order_items;
 CREATE POLICY "Allow public order_items insertion" ON public.order_items FOR INSERT WITH CHECK (true);
 
+-- Allow admin to update order status
+DROP POLICY IF EXISTS "Allow public order update" ON public.orders;
+CREATE POLICY "Allow public order update" ON public.orders FOR UPDATE USING (true) WITH CHECK (true);
+
+-- Allow reading order items (for track order)
+DROP POLICY IF EXISTS "Allow public order_items selection" ON public.order_items;
+CREATE POLICY "Allow public order_items selection" ON public.order_items FOR SELECT USING (true);
+
 DROP POLICY IF EXISTS "Allow public customization insertion" ON public.customizations;
 CREATE POLICY "Allow public customization insertion" ON public.customizations FOR INSERT WITH CHECK (true);
 
