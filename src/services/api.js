@@ -174,7 +174,8 @@ export async function getUserOrders(userEmail) {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    list = data || [];
+    // Supabase returned live data — use it directly without localStorage overrides
+    return data || [];
   } catch (err) {
     console.error('Fetch User Orders Error:', err);
     try {
@@ -184,6 +185,7 @@ export async function getUserOrders(userEmail) {
       list = [];
     }
   }
+  // Fallback to localStorage with overrides
   return applyStatusOverrides(list);
 }
 
@@ -298,19 +300,19 @@ export async function getOrderByNumber(orderNumber) {
       .maybeSingle();
 
     if (!error && data) {
-      found = data;
+      // Supabase returned live data with the real updated status — return it directly
+      return data;
     }
   } catch (err) {
     console.error('Track Order Error:', err);
   }
 
-  if (!found) {
-    try {
-      const savedOrders = JSON.parse(localStorage.getItem('everframe_orders') || '[]');
-      found = savedOrders.find(o => o.order_number?.toString().toUpperCase() === cleanNumber || o.id?.toString().toUpperCase() === cleanNumber) || null;
-    } catch {
-      found = null;
-    }
+  // Supabase failed — fallback to localStorage with overrides
+  try {
+    const savedOrders = JSON.parse(localStorage.getItem('everframe_orders') || '[]');
+    found = savedOrders.find(o => o.order_number?.toString().toUpperCase() === cleanNumber || o.id?.toString().toUpperCase() === cleanNumber) || null;
+  } catch {
+    found = null;
   }
 
   return found ? applyStatusOverrides([found])[0] : null;
