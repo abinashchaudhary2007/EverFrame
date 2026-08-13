@@ -3,11 +3,11 @@ import { Link } from 'react-router-dom';
 import {
   LayoutDashboard, Package, ShoppingCart, Users, Tag,
   Plus, Search, Trash2, TrendingUp, Lock, LogOut, ShieldCheck, RefreshCw,
-  ToggleLeft, ToggleRight, Copy, Zap
+  ToggleLeft, ToggleRight, Copy, Zap, MessageSquare, MailOpen, Mail
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { products as initialProducts } from '../data/products';
-import { getAllOrders, updateOrderStatus, getAllCoupons, createCoupon, toggleCoupon, deleteCoupon } from '../services/api';
+import { getAllOrders, updateOrderStatus, getAllCoupons, createCoupon, toggleCoupon, deleteCoupon, getContactSubmissions, markContactRead } from '../services/api';
 import CopyButton from '../components/ui/CopyButton';
 
 
@@ -34,6 +34,11 @@ export default function Admin() {
     code: '', discount_type: 'percentage', discount_value: '', min_order_amount: '', max_uses: '', expires_at: '',
   });
   const [couponSaving, setCouponSaving] = useState(false);
+
+  // Contact submissions state
+  const [contactMessages, setContactMessages] = useState([]);
+  const [loadingContacts, setLoadingContacts] = useState(false);
+  const [expandedContact, setExpandedContact] = useState(null);
 
   const [newProduct, setNewProduct] = useState({
     name: '', category: 'photo-frames', price: '', stock: '20', description: '',
@@ -69,7 +74,22 @@ export default function Admin() {
     if (isAdminAuth && tab === 'coupons') {
       loadCoupons();
     }
+    if (isAdminAuth && tab === 'contacts') {
+      loadContactMessages();
+    }
   }, [isAdminAuth, tab]);
+
+  const loadContactMessages = async () => {
+    setLoadingContacts(true);
+    const data = await getContactSubmissions();
+    setContactMessages(data);
+    setLoadingContacts(false);
+  };
+
+  const handleMarkRead = async (msg) => {
+    setContactMessages(prev => prev.map(m => m.id === msg.id ? { ...m, is_read: true } : m));
+    await markContactRead(msg.id);
+  };
 
   const loadCoupons = async () => {
     setLoadingCoupons(true);
@@ -302,6 +322,7 @@ export default function Admin() {
                 { id: 'products', icon: Package, label: `Products (${productList.length})` },
                 { id: 'customers', icon: Users, label: `Customers (${uniqueCustomers.length})` },
                 { id: 'coupons', icon: Tag, label: 'Coupons' },
+                { id: 'contacts', icon: MessageSquare, label: `Messages (${contactMessages.filter(m => !m.is_read).length} unread)` },
               ].map(item => (
                 <a
                   key={item.id}
@@ -742,6 +763,108 @@ export default function Admin() {
                         })}
                       </tbody>
                     </table>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* CONTACT MESSAGES TAB */}
+            {tab === 'contacts' && (
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
+                  <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', fontWeight: 700 }}>Contact Messages</h2>
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <span style={{ fontSize: '12px', background: '#eef9ee', color: '#16a34a', padding: '3px 10px', borderRadius: '20px', fontWeight: 700 }}>● Supabase</span>
+                    <button className="btn btn-outline" onClick={loadContactMessages} style={{ fontSize: '12px', padding: '6px 12px' }}>
+                      <RefreshCw size={14} /> Refresh
+                    </button>
+                  </div>
+                </div>
+
+                {loadingContacts ? (
+                  <p style={{ color: 'var(--color-text-muted)', padding: '40px 0', textAlign: 'center' }}>Loading messages...</p>
+                ) : contactMessages.length === 0 ? (
+                  <div className="empty-state" style={{ padding: '60px 0' }}>
+                    <div className="empty-state-icon"><MessageSquare size={48} strokeWidth={1} /></div>
+                    <h3>No messages yet</h3>
+                    <p>Contact form submissions from customers will appear here.</p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    {contactMessages.map(msg => (
+                      <div
+                        key={msg.id}
+                        style={{
+                          border: `1.5px solid ${msg.is_read ? 'var(--color-border)' : '#c7d7ff'}`,
+                          borderRadius: '12px',
+                          padding: '20px',
+                          background: msg.is_read ? 'var(--color-white)' : '#f0f4ff',
+                          boxShadow: msg.is_read ? 'none' : '0 2px 12px rgba(80,100,220,0.08)',
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px', marginBottom: '12px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            {msg.is_read
+                              ? <MailOpen size={18} color="var(--color-text-muted)" />
+                              : <Mail size={18} color="#3D3A86" />}
+                            <div>
+                              <div style={{ fontWeight: 700, fontSize: '15px', color: 'var(--color-primary-navy)' }}>{msg.name}</div>
+                              <div style={{ fontSize: '12.5px', color: 'var(--color-text-muted)' }}>{msg.email}</div>
+                            </div>
+                            {!msg.is_read && (
+                              <span style={{ fontSize: '10px', fontWeight: 700, background: '#3D3A86', color: '#fff', padding: '2px 8px', borderRadius: '12px' }}>NEW</span>
+                            )}
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
+                              {msg.created_at ? new Date(msg.created_at).toLocaleDateString('en-NP', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div style={{ fontWeight: 700, fontSize: '14px', color: 'var(--color-dark)', marginBottom: '8px' }}>
+                          Subject: {msg.subject}
+                        </div>
+
+                        <div
+                          style={{
+                            fontSize: '13.5px',
+                            color: 'var(--color-text-muted)',
+                            background: 'var(--color-surface)',
+                            borderRadius: '8px',
+                            padding: '12px 14px',
+                            lineHeight: 1.6,
+                            whiteSpace: 'pre-wrap',
+                            maxHeight: expandedContact === msg.id ? 'none' : '72px',
+                            overflow: expandedContact === msg.id ? 'visible' : 'hidden',
+                            cursor: 'pointer',
+                          }}
+                          onClick={() => setExpandedContact(expandedContact === msg.id ? null : msg.id)}
+                        >
+                          {msg.message}
+                        </div>
+                        {msg.message && msg.message.length > 160 && (
+                          <button
+                            onClick={() => setExpandedContact(expandedContact === msg.id ? null : msg.id)}
+                            style={{ background: 'none', border: 'none', color: 'var(--color-blue)', fontSize: '12px', cursor: 'pointer', marginTop: '4px', padding: 0, fontWeight: 600 }}
+                          >
+                            {expandedContact === msg.id ? 'Show less ↑' : 'Show more ↓'}
+                          </button>
+                        )}
+
+                        {!msg.is_read && (
+                          <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid var(--color-border-light)' }}>
+                            <button
+                              className="btn btn-outline btn-sm"
+                              style={{ fontSize: '12px' }}
+                              onClick={() => handleMarkRead(msg)}
+                            >
+                              <MailOpen size={13} /> Mark as Read
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>

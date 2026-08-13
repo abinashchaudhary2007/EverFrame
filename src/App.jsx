@@ -19,6 +19,7 @@ import TrackOrder from './pages/TrackOrder';
 import Categories from './pages/Categories';
 import Admin from './pages/Admin';
 import AuthCallback from './pages/AuthCallback';
+import Contact from './pages/Contact';
 
 function App() {
   return (
@@ -42,6 +43,7 @@ function App() {
                 <Route path="/track-order" element={<TrackOrder />} />
                 <Route path="/categories" element={<Categories />} />
                 <Route path="/admin" element={<Admin />} />
+                <Route path="/contact" element={<Contact />} />
                 {/* Supabase Google OAuth redirect callback */}
                 <Route path="/auth/callback" element={<AuthCallback />} />
                 <Route path="*" element={

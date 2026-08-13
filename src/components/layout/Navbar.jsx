@@ -29,6 +29,7 @@ export default function Navbar() {
     { to: '/customize', label: 'Custom Frame' },
     { to: '/track-order', label: 'Track Order' },
     { to: '/categories', label: 'Categories' },
+    { to: '/contact', label: 'Contact Us' },
   ];
 
   return (

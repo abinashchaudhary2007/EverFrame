@@ -508,3 +508,62 @@ export async function deleteCoupon(id) {
     return false;
   }
 }
+
+// Submit a contact form message
+export async function submitContactForm({ name, email, subject, message }) {
+  if (!isSupabaseConfigured || !supabase) {
+    // Fallback: store locally
+    try {
+      const local = JSON.parse(localStorage.getItem('everframe_contact_submissions') || '[]');
+      const entry = { id: Date.now(), name, email, subject, message, created_at: new Date().toISOString(), is_read: false };
+      localStorage.setItem('everframe_contact_submissions', JSON.stringify([entry, ...local]));
+      return { success: true };
+    } catch { return { success: false, error: 'Failed to save locally' }; }
+  }
+  try {
+    const { error } = await supabase
+      .from('contact_submissions')
+      .insert([{ name, email, subject, message }]);
+    if (error) throw error;
+    return { success: true };
+  } catch (err) {
+    console.error('Contact Form Submit Error:', err);
+    return { success: false, error: err.message };
+  }
+}
+
+// Fetch all contact submissions (Admin)
+export async function getContactSubmissions() {
+  if (!isSupabaseConfigured || !supabase) {
+    try {
+      return JSON.parse(localStorage.getItem('everframe_contact_submissions') || '[]');
+    } catch { return []; }
+  }
+  try {
+    const { data, error } = await supabase
+      .from('contact_submissions')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  } catch (err) {
+    console.error('Get Contact Submissions Error:', err);
+    return [];
+  }
+}
+
+// Mark a contact submission as read (Admin)
+export async function markContactRead(id) {
+  if (!isSupabaseConfigured || !supabase) {
+    try {
+      const local = JSON.parse(localStorage.getItem('everframe_contact_submissions') || '[]');
+      localStorage.setItem('everframe_contact_submissions', JSON.stringify(local.map(s => s.id === id ? { ...s, is_read: true } : s)));
+    } catch {}
+    return;
+  }
+  try {
+    await supabase.from('contact_submissions').update({ is_read: true }).eq('id', id);
+  } catch (err) {
+    console.error('Mark Contact Read Error:', err);
+  }
+}
