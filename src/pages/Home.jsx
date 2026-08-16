@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import HeroCarousel from '../components/home/HeroCarousel';
 import CustomFrameSection from '../components/home/CustomFrameSection';
@@ -5,12 +6,24 @@ import ProcessSection from '../components/home/ProcessSection';
 import ThoughtfulGiftsSection from '../components/home/ThoughtfulGiftsSection';
 import ProductCard from '../components/product/ProductCard';
 import FeaturedCard from '../components/product/FeaturedCard';
-import { products } from '../data/products';
-
-const popularProducts = products.slice(0, 8);
-const featuredProducts = products.filter(p => p.isFeatured);
+import { products as initialProducts } from '../data/products';
+import { getPublicProducts } from '../services/api';
 
 export default function Home() {
+  const [productsList, setProductsList] = useState(initialProducts);
+
+  useEffect(() => {
+    async function load() {
+      const res = await getPublicProducts();
+      if (res && res.data && res.data.length > 0) {
+        setProductsList(res.data);
+      }
+    }
+    load();
+  }, []);
+
+  const popularProducts = productsList.slice(0, 8);
+  const featuredProducts = productsList.filter(p => p.isFeatured);
   return (
     <div className="page-enter">
       {/* Hero Carousel */}

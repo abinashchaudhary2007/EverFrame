@@ -1,6 +1,7 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { categories } from '../data/products';
-import { products } from '../data/products';
+import { categories, products as initialProducts } from '../data/products';
+import { getPublicProducts } from '../services/api';
 
 const categoryImages = {
   'photo-frames': 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=600&q=80',
@@ -11,6 +12,18 @@ const categoryImages = {
 };
 
 export default function Categories() {
+  const [productsList, setProductsList] = useState(initialProducts);
+
+  useEffect(() => {
+    async function load() {
+      const res = await getPublicProducts();
+      if (res?.data?.length > 0) {
+        setProductsList(res.data);
+      }
+    }
+    load();
+  }, []);
+
   const cats = categories.filter(c => c.id !== 'all');
 
   return (
@@ -27,7 +40,7 @@ export default function Categories() {
       <div className="container section">
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px' }}>
           {cats.map(cat => {
-            const count = products.filter(p => p.category === cat.id).length;
+            const count = productsList.filter(p => p.category === cat.id).length;
             return (
               <Link
                 key={cat.id}

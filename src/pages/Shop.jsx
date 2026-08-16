@@ -1,25 +1,40 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Search, SlidersHorizontal } from 'lucide-react';
 import ProductCard from '../components/product/ProductCard';
-import { products, categories } from '../data/products';
+import { categories, products as initialProducts } from '../data/products';
+import { getPublicProducts } from '../services/api';
 
 export default function Shop() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState(searchParams.get('q') || '');
   const [activeCategory, setActiveCategory] = useState(searchParams.get('category') || 'all');
   const [sortBy, setSortBy] = useState('featured');
+  const [productsList, setProductsList] = useState(initialProducts);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      setLoading(true);
+      const res = await getPublicProducts();
+      if (res && res.data && res.data.length > 0) {
+        setProductsList(res.data);
+      }
+      setLoading(false);
+    }
+    load();
+  }, []);
 
   const filtered = useMemo(() => {
-    let list = [...products];
+    let list = [...productsList];
 
     // Search
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(p =>
-        p.name.toLowerCase().includes(q) ||
-        p.categoryLabel.toLowerCase().includes(q) ||
-        p.description.toLowerCase().includes(q)
+        p.name?.toLowerCase().includes(q) ||
+        (p.categoryLabel || '').toLowerCase().includes(q) ||
+        (p.description || '').toLowerCase().includes(q)
       );
     }
 
@@ -30,15 +45,15 @@ export default function Shop() {
 
     // Sort
     switch (sortBy) {
-      case 'price-asc':  list.sort((a, b) => a.price - b.price); break;
-      case 'price-desc': list.sort((a, b) => b.price - a.price); break;
-      case 'rating':     list.sort((a, b) => b.rating - a.rating); break;
-      case 'newest':     list.sort((a, b) => b.id - a.id); break;
+      case 'price-asc':  list.sort((a, b) => (a.price || 0) - (b.price || 0)); break;
+      case 'price-desc': list.sort((a, b) => (b.price || 0) - (a.price || 0)); break;
+      case 'rating':     list.sort((a, b) => (b.rating || 0) - (a.rating || 0)); break;
+      case 'newest':     list.sort((a, b) => new Date(b.created_at || b.id) - new Date(a.created_at || a.id)); break;
       default:           break;
     }
 
     return list;
-  }, [search, activeCategory, sortBy]);
+  }, [productsList, search, activeCategory, sortBy]);
 
   const handleCategory = (cat) => {
     setActiveCategory(cat);

@@ -1,14 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
   LayoutDashboard, Package, ShoppingCart, Users, Tag,
   Plus, Search, Trash2, TrendingUp, Lock, LogOut, ShieldCheck, RefreshCw,
-  ToggleLeft, ToggleRight, Copy, Zap, MessageSquare, MailOpen, Mail
+  ToggleLeft, ToggleRight, Copy, Zap, MessageSquare, MailOpen, Mail,
+  Edit2, Eye, EyeOff, X, ImagePlus, Star, CheckCircle, AlertTriangle,
+  SlidersHorizontal, ChevronDown, Upload
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { products as initialProducts } from '../data/products';
-import { getAllOrders, updateOrderStatus, getAllCoupons, createCoupon, toggleCoupon, deleteCoupon, getContactSubmissions, markContactRead } from '../services/api';
+import { getAllOrders, updateOrderStatus, getAllCoupons, createCoupon, toggleCoupon, deleteCoupon, getContactSubmissions, markContactRead, getAdminProducts, createProduct, updateProduct, deleteProduct, toggleProductAvailability, toggleProductFeatured } from '../services/api';
 import CopyButton from '../components/ui/CopyButton';
+
 
 
 export default function Admin() {
@@ -18,10 +20,34 @@ export default function Admin() {
   const [loginError, setLoginError] = useState('');
 
   const [tab, setTab] = useState('overview');
-  const [productList, setProductList] = useState(initialProducts);
+
+  // Product management state
+  const [productList, setProductList] = useState([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  const [productSearch, setProductSearch] = useState('');
+  const [productCategoryFilter, setProductCategoryFilter] = useState('all');
+  const [productAvailFilter, setProductAvailFilter] = useState('all');
+  const [productSort, setProductSort] = useState('newest');
+  const [showProductModal, setShowProductModal] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [productSaving, setProductSaving] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const imageInputRef = useRef(null);
+
+  const EMPTY_PRODUCT_FORM = {
+    name: '', description: '', category: 'photo-frames', price: '',
+    original_price: '', sizes: '5x7, 8x10', colors: 'Natural, Black',
+    material: 'Wood', frame_type: 'classic', stock: '50',
+    is_featured: false, is_available: true,
+  };
+  const [productForm, setProductForm] = useState(EMPTY_PRODUCT_FORM);
+  const [productImages, setProductImages] = useState([]);
+  const [productFormError, setProductFormError] = useState('');
+
+  // Orders state
   const [orders, setOrders] = useState([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
-  const [search, setSearch] = useState('');
   const [orderStatusFilter, setOrderStatusFilter] = useState('All');
   const [orderSearchQuery, setOrderSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -40,9 +66,8 @@ export default function Admin() {
   const [loadingContacts, setLoadingContacts] = useState(false);
   const [expandedContact, setExpandedContact] = useState(null);
 
-  const [newProduct, setNewProduct] = useState({
-    name: '', category: 'photo-frames', price: '', stock: '20', description: '',
-  });
+  // Keep for legacy/overview
+  const search = productSearch;
 
   // Load all real orders from Supabase when admin panel opens
   const loadOrders = async () => {
@@ -52,9 +77,18 @@ export default function Admin() {
     setLoadingOrders(false);
   };
 
+  // Load products from Supabase
+  const loadProducts = async () => {
+    setLoadingProducts(true);
+    const data = await getAdminProducts();
+    setProductList(data);
+    setLoadingProducts(false);
+  };
+
   useEffect(() => {
     if (isAdminAuth) {
       loadOrders();
+      loadProducts();
 
       const handleLiveOrder = () => loadOrders();
       window.addEventListener('everframe_order_updated', handleLiveOrder);
@@ -69,7 +103,7 @@ export default function Admin() {
     }
   }, [isAdminAuth]);
 
-  // Load coupons when coupons tab is opened
+  // Load coupons/contacts/products when tab is opened
   useEffect(() => {
     if (isAdminAuth && tab === 'coupons') {
       loadCoupons();
@@ -77,7 +111,188 @@ export default function Admin() {
     if (isAdminAuth && tab === 'contacts') {
       loadContactMessages();
     }
+    if (isAdminAuth && tab === 'products') {
+      loadProducts();
+    }
   }, [isAdminAuth, tab]);
+
+  // --- Product Action Handlers ---
+  const openAddProduct = () => {
+    setEditingProduct(null);
+    setProductForm(EMPTY_PRODUCT_FORM);
+    setProductImages([]);
+    setProductFormError('');
+    setShowProductModal(true);
+  };
+
+  const openEditProduct = (product) => {
+    setEditingProduct(product);
+    setProductForm({
+      name: product.name || '',
+      description: product.description || '',
+      category: product.category || 'photo-frames',
+      price: product.price?.toString() || '',
+      original_price: product.originalPrice?.toString() || product.original_price?.toString() || '',
+      sizes: Array.isArray(product.sizes) ? product.sizes.join(', ') : (product.sizes || ''),
+      colors: Array.isArray(product.colors) ? product.colors.join(', ') : (product.colors || ''),
+      material: product.material || 'Wood',
+      frame_type: product.frameType || product.frame_type || 'classic',
+      stock: product.stock?.toString() || '50',
+      is_featured: product.isFeatured ?? product.is_featured ?? false,
+      is_available: product.isAvailable ?? product.is_available ?? true,
+    });
+    setProductImages((product.images || []).map(url => ({ url, preview: url })));
+    setProductFormError('');
+    setShowProductModal(true);
+  };
+
+  const handleProductImageSelect = (e) => {
+    const files = Array.from(e.target.files || []);
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    const valid = [];
+    for (const file of files) {
+      if (!validTypes.includes(file.type)) {
+        toast.error(`${file.name}: invalid file type (JPG/PNG/WebP only)`);
+        continue;
+      }
+      if (file.size > maxSize) {
+        toast.error(`${file.name}: file too large (max 5MB)`);
+        continue;
+      }
+      valid.push({ file, url: '', preview: URL.createObjectURL(file) });
+    }
+    setProductImages(prev => [...prev, ...valid]);
+    if (imageInputRef.current) imageInputRef.current.value = '';
+  };
+
+  const removeProductImage = (idx) => {
+    setProductImages(prev => {
+      const copy = [...prev];
+      if (copy[idx]?.preview && copy[idx].file) {
+        URL.revokeObjectURL(copy[idx].preview);
+      }
+      copy.splice(idx, 1);
+      return copy;
+    });
+  };
+
+  const validateProductForm = () => {
+    if (!productForm.name.trim()) return 'Product name is required.';
+    if (!productForm.category) return 'Category is required.';
+    if (!productForm.price || isNaN(parseFloat(productForm.price)) || parseFloat(productForm.price) <= 0)
+      return 'Price must be a valid positive number.';
+    if (productForm.original_price && parseFloat(productForm.original_price) <= parseFloat(productForm.price))
+      return 'Original price must be greater than the selling price to offer a discount.';
+    if (productImages.length === 0) return 'At least one product image is required.';
+    return '';
+  };
+
+  const handleSaveProduct = async (e) => {
+    e.preventDefault();
+    const err = validateProductForm();
+    if (err) {
+      setProductFormError(err);
+      return;
+    }
+    setProductFormError('');
+    setProductSaving(true);
+
+    const imageFiles = productImages.map(img => img.file || img.url);
+
+    if (editingProduct) {
+      const result = await updateProduct(editingProduct.id, productForm, imageFiles);
+      setProductSaving(false);
+      if (result.success) {
+        toast.success(`"${productForm.name}" updated!`, {
+          position: 'bottom-right',
+          style: { background: '#172A72', color: '#fff', borderRadius: '8px' }
+        });
+        setShowProductModal(false);
+        loadProducts();
+      } else {
+        setProductFormError(result.error || 'Failed to update product.');
+      }
+    } else {
+      const result = await createProduct(productForm, imageFiles);
+      setProductSaving(false);
+      if (result.success) {
+        toast.success(`"${productForm.name}" added successfully!`, {
+          position: 'bottom-right',
+          style: { background: '#16a34a', color: '#fff', borderRadius: '8px' }
+        });
+        setShowProductModal(false);
+        loadProducts();
+      } else {
+        setProductFormError(result.error || 'Failed to create product.');
+      }
+    }
+  };
+
+  const handleToggleAvailability = async (product) => {
+    const newVal = !product.isAvailable;
+    setProductList(prev => prev.map(p => p.id === product.id ? { ...p, isAvailable: newVal, is_available: newVal } : p));
+    const result = await toggleProductAvailability(product.id, newVal);
+    if (result.success) {
+      toast.success(`"${product.name}" is now ${newVal ? 'Available' : 'Unavailable'}`, {
+        position: 'bottom-right',
+        style: { background: '#172A72', color: '#fff', borderRadius: '8px' }
+      });
+    } else {
+      setProductList(prev => prev.map(p => p.id === product.id ? { ...p, isAvailable: !newVal, is_available: !newVal } : p));
+      toast.error('Failed to update product availability');
+    }
+  };
+
+  const handleToggleFeatured = async (product) => {
+    const newVal = !product.isFeatured;
+    setProductList(prev => prev.map(p => p.id === product.id ? { ...p, isFeatured: newVal, is_featured: newVal } : p));
+    const result = await toggleProductFeatured(product.id, newVal);
+    if (result.success) {
+      toast.success(`"${product.name}" ${newVal ? 'marked as Featured ⭐' : 'removed from Featured'}`, {
+        position: 'bottom-right',
+        style: { background: '#172A72', color: '#fff', borderRadius: '8px' }
+      });
+    } else {
+      setProductList(prev => prev.map(p => p.id === product.id ? { ...p, isFeatured: !newVal, is_featured: !newVal } : p));
+      toast.error('Failed to update featured status');
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteConfirm) return;
+    setDeleting(true);
+    const result = await deleteProduct(deleteConfirm.id);
+    setDeleting(false);
+    if (result.success) {
+      setProductList(prev => prev.filter(p => p.id !== deleteConfirm.id));
+      toast.success(`"${deleteConfirm.name}" deleted.`, {
+        position: 'bottom-right',
+        style: { background: '#dc2626', color: '#fff', borderRadius: '8px' }
+      });
+    } else {
+      toast.error(result.error || 'Failed to delete product');
+    }
+    setDeleteConfirm(null);
+  };
+
+  // Filtered & sorted products for Admin
+  const adminFilteredProducts = productList
+    .filter(p => {
+      const q = productSearch.trim().toLowerCase();
+      const matchSearch = !q || p.name.toLowerCase().includes(q) || (p.categoryLabel || '').toLowerCase().includes(q);
+      const matchCat = productCategoryFilter === 'all' || p.category === productCategoryFilter;
+      const matchAvail = productAvailFilter === 'all'
+        || (productAvailFilter === 'available' && p.isAvailable)
+        || (productAvailFilter === 'hidden' && !p.isAvailable);
+      return matchSearch && matchCat && matchAvail;
+    })
+    .sort((a, b) => {
+      if (productSort === 'oldest') return new Date(a.created_at) - new Date(b.created_at);
+      if (productSort === 'price-asc') return a.price - b.price;
+      if (productSort === 'price-desc') return b.price - a.price;
+      return new Date(b.created_at) - new Date(a.created_at);
+    });
 
   const loadContactMessages = async () => {
     setLoadingContacts(true);
@@ -172,9 +387,9 @@ export default function Admin() {
     const targetNum = targetOrder.order_number || targetOrder.id;
 
     // Optimistically update orders in local Admin state so status button updates IMMEDIATELY in UI
-    setOrders(prev => prev.map(o => 
-      (o.id === targetOrder.id || o.order_number === targetOrder.order_number || o.id === targetId || o.order_number === targetId) 
-        ? { ...o, order_status: newStatus } 
+    setOrders(prev => prev.map(o =>
+      (o.id === targetOrder.id || o.order_number === targetOrder.order_number || o.id === targetId || o.order_number === targetId)
+        ? { ...o, order_status: newStatus }
         : o
     ));
 
@@ -190,7 +405,7 @@ export default function Admin() {
   const filteredOrders = orders.filter(order => {
     const matchesStatus = orderStatusFilter === 'All' || order.order_status === orderStatusFilter;
     const q = orderSearchQuery.trim().toLowerCase();
-    const matchesSearch = !q || 
+    const matchesSearch = !q ||
       (order.order_number || '').toLowerCase().includes(q) ||
       (order.customer_name || '').toLowerCase().includes(q) ||
       (order.customer_email || '').toLowerCase().includes(q) ||
@@ -198,44 +413,7 @@ export default function Admin() {
     return matchesStatus && matchesSearch;
   });
 
-  const handleDeleteProduct = (id) => {
-    setProductList(prev => prev.filter(p => p.id !== id));
-    toast.success('Product removed from view', { position: 'bottom-right', style: { background: '#172A72', color: '#fff' } });
-  };
 
-  const handleAddProduct = (e) => {
-    e.preventDefault();
-    if (!newProduct.name || !newProduct.price) {
-      toast.error('Please enter name and price'); return;
-    }
-    const created = {
-      id: Date.now(),
-      name: newProduct.name,
-      slug: newProduct.name.toLowerCase().replace(/\s+/g, '-'),
-      category: newProduct.category,
-      categoryLabel: newProduct.category.toUpperCase().replace(/-/g, ' '),
-      price: parseFloat(newProduct.price),
-      originalPrice: null,
-      discount: null,
-      badge: 'NEW',
-      rating: 5.0,
-      reviewCount: 1,
-      stock: parseInt(newProduct.stock) || 10,
-      description: newProduct.description || 'Premium frame handcrafted for your space.',
-      images: ['https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=600&q=80'],
-      material: 'Wood',
-      frameType: 'classic',
-      sizes: ['5x7', '8x10'],
-      colors: ['Natural', 'Black'],
-    };
-    setProductList(prev => [created, ...prev]);
-    setShowAddModal(false);
-    setNewProduct({ name: '', category: 'photo-frames', price: '', stock: '20', description: '' });
-    toast.success(`"${created.name}" added!`, {
-      position: 'bottom-right',
-      style: { background: '#172A72', color: '#fff', borderRadius: '8px' },
-    });
-  };
 
   // Derived stats from real orders
   const totalSales = orders.reduce((sum, o) => sum + (o.total || 0), 0);
@@ -297,7 +475,7 @@ export default function Admin() {
             <h1 className="section-heading">EverFrame Admin</h1>
           </div>
           <div style={{ display: 'flex', gap: '12px' }}>
-            <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
+            <button className="btn btn-primary" onClick={openAddProduct}>
               <Plus size={16} /> Add Product
             </button>
             <button className="btn btn-outline" onClick={loadOrders} title="Refresh orders from Supabase">
@@ -524,49 +702,242 @@ export default function Admin() {
             {/* PRODUCTS TAB */}
             {tab === 'products' && (
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                  <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', fontWeight: 700 }}>Products Catalog</h2>
-                  <div className="search-bar" style={{ padding: '6px 12px' }}>
-                    <Search size={14} color="var(--color-text-muted)" />
-                    <input type="text" placeholder="Search products..." value={search} onChange={e => setSearch(e.target.value)} style={{ fontSize: '13px' }} />
+                {/* Header */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+                  <div>
+                    <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', fontWeight: 700 }}>Product Management</h2>
+                    <p style={{ fontSize: '13px', color: 'var(--color-text-muted)', marginTop: '2px' }}>
+                      Manage products, pricing, availability, and featured showcases ({productList.length} total)
+                    </p>
+                  </div>
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <button className="btn btn-outline" onClick={loadProducts} style={{ fontSize: '12px', padding: '6px 12px' }}>
+                      <RefreshCw size={14} /> Refresh
+                    </button>
+                    <button className="btn btn-primary" onClick={openAddProduct} style={{ fontSize: '13px' }}>
+                      <Plus size={15} /> Add Product
+                    </button>
                   </div>
                 </div>
 
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13.5px' }}>
-                    <thead>
-                      <tr style={{ background: 'var(--color-surface)', textAlign: 'left', borderBottom: '1.5px solid var(--color-border)' }}>
-                        <th style={{ padding: '12px 14px', fontWeight: 700 }}>Product</th>
-                        <th style={{ padding: '12px 14px', fontWeight: 700 }}>Category</th>
-                        <th style={{ padding: '12px 14px', fontWeight: 700 }}>Price</th>
-                        <th style={{ padding: '12px 14px', fontWeight: 700 }}>Stock</th>
-                        <th style={{ padding: '12px 14px', fontWeight: 700, textAlign: 'right' }}>Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {productList
-                        .filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
-                        .map(p => (
-                          <tr key={p.id} style={{ borderBottom: '1px solid var(--color-border-light)' }}>
+                {/* Filters toolbar */}
+                <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border-light)', borderRadius: '12px', padding: '16px', marginBottom: '20px', display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
+                  <div className="search-bar" style={{ flex: '1 1 220px', background: '#fff', padding: '7px 12px' }}>
+                    <Search size={14} color="var(--color-text-muted)" />
+                    <input
+                      type="text"
+                      placeholder="Search by name or category..."
+                      value={productSearch}
+                      onChange={e => setProductSearch(e.target.value)}
+                      style={{ fontSize: '13px' }}
+                    />
+                  </div>
+                  <select
+                    className="form-input"
+                    style={{ flex: '0 1 160px', fontSize: '13px', padding: '8px 10px', height: 'auto', background: '#fff' }}
+                    value={productCategoryFilter}
+                    onChange={e => setProductCategoryFilter(e.target.value)}
+                  >
+                    <option value="all">All Categories</option>
+                    <option value="photo-frames">Photo Frames</option>
+                    <option value="wedding-frames">Wedding Frames</option>
+                    <option value="wall-art">Wall Art</option>
+                    <option value="personalized-gifts">Personalized Gifts</option>
+                    <option value="collage-frames">Collage Frames</option>
+                  </select>
+                  <select
+                    className="form-input"
+                    style={{ flex: '0 1 140px', fontSize: '13px', padding: '8px 10px', height: 'auto', background: '#fff' }}
+                    value={productAvailFilter}
+                    onChange={e => setProductAvailFilter(e.target.value)}
+                  >
+                    <option value="all">All Status</option>
+                    <option value="available">Available Only</option>
+                    <option value="hidden">Hidden Only</option>
+                  </select>
+                  <select
+                    className="form-input"
+                    style={{ flex: '0 1 160px', fontSize: '13px', padding: '8px 10px', height: 'auto', background: '#fff' }}
+                    value={productSort}
+                    onChange={e => setProductSort(e.target.value)}
+                  >
+                    <option value="newest">Newest First</option>
+                    <option value="oldest">Oldest First</option>
+                    <option value="price-asc">Price: Low → High</option>
+                    <option value="price-desc">Price: High → Low</option>
+                  </select>
+                </div>
+
+                {/* Product table / states */}
+                {loadingProducts ? (
+                  <div style={{ padding: '60px 0', textAlign: 'center' }}>
+                    <div style={{ display: 'inline-block', width: '36px', height: '36px', border: '3px solid var(--color-border)', borderTopColor: 'var(--color-blue)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                    <p style={{ color: 'var(--color-text-muted)', marginTop: '14px', fontSize: '14px' }}>Loading products from Supabase...</p>
+                  </div>
+                ) : adminFilteredProducts.length === 0 ? (
+                  <div className="empty-state" style={{ padding: '60px 0' }}>
+                    <div className="empty-state-icon"><Package size={48} strokeWidth={1} /></div>
+                    <h3>{productList.length === 0 ? 'No products yet' : 'No products match your filters'}</h3>
+                    <p>{productList.length === 0 ? 'Click "Add Product" to add your first product.' : 'Try clearing your search or filter options.'}</p>
+                    {productList.length === 0 ? (
+                      <button className="btn btn-primary" onClick={openAddProduct}><Plus size={15} /> Add Product</button>
+                    ) : (
+                      <button className="btn btn-outline btn-sm" onClick={() => { setProductSearch(''); setProductCategoryFilter('all'); setProductAvailFilter('all'); }}>Clear Filters</button>
+                    )}
+                  </div>
+                ) : (
+                  <div style={{ overflowX: 'auto', borderRadius: '12px', border: '1px solid var(--color-border)', background: '#fff' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', minWidth: '850px' }}>
+                      <thead>
+                        <tr style={{ background: 'var(--color-surface)', textAlign: 'left', borderBottom: '1.5px solid var(--color-border)' }}>
+                          <th style={{ padding: '12px 14px', fontWeight: 700, fontSize: '11.5px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Product</th>
+                          <th style={{ padding: '12px 14px', fontWeight: 700, fontSize: '11.5px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Category</th>
+                          <th style={{ padding: '12px 14px', fontWeight: 700, fontSize: '11.5px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Price</th>
+                          <th style={{ padding: '12px 14px', fontWeight: 700, fontSize: '11.5px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Sizes</th>
+                          <th style={{ padding: '12px 14px', fontWeight: 700, fontSize: '11.5px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Status</th>
+                          <th style={{ padding: '12px 14px', fontWeight: 700, fontSize: '11.5px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Featured</th>
+                          <th style={{ padding: '12px 14px', fontWeight: 700, fontSize: '11.5px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Added</th>
+                          <th style={{ padding: '12px 14px', fontWeight: 700, fontSize: '11.5px', textTransform: 'uppercase', letterSpacing: '0.04em', textAlign: 'right' }}>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {adminFilteredProducts.map(p => (
+                          <tr key={p.id} style={{ borderBottom: '1px solid var(--color-border-light)', background: p.isAvailable ? 'var(--color-white)' : '#fafafa' }}>
+                            {/* Product image + name */}
                             <td style={{ padding: '12px 14px' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                <img src={p.images[0]} alt={p.name} style={{ width: '36px', height: '36px', borderRadius: '6px', objectFit: 'cover' }} />
-                                <span style={{ fontWeight: 600, color: 'var(--color-dark)' }}>{p.name}</span>
+                                <div style={{ width: '44px', height: '44px', borderRadius: '8px', overflow: 'hidden', flexShrink: 0, background: 'var(--color-surface)', border: '1px solid var(--color-border-light)' }}>
+                                  {p.images?.[0] ? (
+                                    <img src={p.images[0]} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                  ) : (
+                                    <Package size={20} color="var(--color-text-muted)" style={{ margin: '12px' }} />
+                                  )}
+                                </div>
+                                <div>
+                                  <div style={{ fontWeight: 700, color: 'var(--color-dark)', fontSize: '13.5px', lineHeight: 1.3 }}>{p.name}</div>
+                                  {p.discount > 0 && (
+                                    <span style={{ fontSize: '10.5px', fontWeight: 700, background: '#fff7ed', color: '#c2410c', padding: '1px 6px', borderRadius: '20px', display: 'inline-block', marginTop: '2px' }}>
+                                      {p.discount}% OFF
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                             </td>
-                            <td style={{ padding: '12px 14px', color: 'var(--color-text-muted)' }}>{p.categoryLabel}</td>
-                            <td style={{ padding: '12px 14px', fontWeight: 700, color: 'var(--color-primary-navy)' }}>NPR {p.price.toLocaleString()}</td>
-                            <td style={{ padding: '12px 14px', color: 'var(--color-text-muted)' }}>{p.stock} pcs</td>
-                            <td style={{ padding: '12px 14px', textAlign: 'right' }}>
-                              <button onClick={() => handleDeleteProduct(p.id)} style={{ color: '#E11D48', padding: '4px 8px' }} title="Remove">
-                                <Trash2 size={16} />
+                            {/* Category */}
+                            <td style={{ padding: '12px 14px', color: 'var(--color-text-muted)', fontSize: '12.5px' }}>{p.categoryLabel || p.category}</td>
+                            {/* Price */}
+                            <td style={{ padding: '12px 14px' }}>
+                              <div style={{ fontWeight: 700, color: 'var(--color-primary-navy)' }}>NPR {p.price?.toLocaleString()}</div>
+                              {p.originalPrice && (
+                                <div style={{ fontSize: '11.5px', color: 'var(--color-text-muted)', textDecoration: 'line-through' }}>
+                                  NPR {p.originalPrice.toLocaleString()}
+                                </div>
+                              )}
+                            </td>
+                            {/* Sizes */}
+                            <td style={{ padding: '12px 14px', color: 'var(--color-text-muted)', fontSize: '12px' }}>
+                              {(p.sizes || []).slice(0, 3).join(', ')}{p.sizes?.length > 3 ? '…' : ''}
+                            </td>
+                            {/* Availability / Status */}
+                            <td style={{ padding: '12px 14px' }}>
+                              <button
+                                onClick={() => handleToggleAvailability(p)}
+                                title={p.isAvailable ? 'Click to mark as Unavailable' : 'Click to mark as Available'}
+                                style={{
+                                  fontSize: '11.5px',
+                                  fontWeight: 700,
+                                  padding: '4px 12px',
+                                  borderRadius: '20px',
+                                  background: p.isAvailable ? '#dcfce7' : '#fee2e2',
+                                  color: p.isAvailable ? '#16a34a' : '#dc2626',
+                                  border: `1px solid ${p.isAvailable ? '#bbf7d0' : '#fecaca'}`,
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '5px',
+                                  transition: 'all 0.2s ease',
+                                }}
+                                onMouseEnter={e => {
+                                  e.currentTarget.style.transform = 'scale(1.05)';
+                                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
+                                }}
+                                onMouseLeave={e => {
+                                  e.currentTarget.style.transform = 'scale(1)';
+                                  e.currentTarget.style.boxShadow = 'none';
+                                }}
+                              >
+                                <span>{p.isAvailable ? '●' : '○'}</span>
+                                {p.isAvailable ? 'Available' : 'Unavailable'}
                               </button>
+                            </td>
+                            {/* Featured */}
+                            <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                              <button
+                                onClick={() => handleToggleFeatured(p)}
+                                title={p.isFeatured ? 'Featured product (click to unfeature)' : 'Click to mark as Featured'}
+                                style={{
+                                  background: p.isFeatured ? '#fffbeb' : 'var(--color-surface)',
+                                  border: `1px solid ${p.isFeatured ? '#fde68a' : 'var(--color-border)'}`,
+                                  borderRadius: '8px',
+                                  padding: '5px 8px',
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  transition: 'all 0.2s ease',
+                                }}
+                                onMouseEnter={e => {
+                                  e.currentTarget.style.transform = 'scale(1.1)';
+                                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(245, 158, 11, 0.25)';
+                                }}
+                                onMouseLeave={e => {
+                                  e.currentTarget.style.transform = 'scale(1)';
+                                  e.currentTarget.style.boxShadow = 'none';
+                                }}
+                              >
+                                <Star
+                                  size={16}
+                                  fill={p.isFeatured ? '#f59e0b' : 'none'}
+                                  color={p.isFeatured ? '#f59e0b' : '#9ca3af'}
+                                />
+                              </button>
+                            </td>
+                            {/* Created at */}
+                            <td style={{ padding: '12px 14px', color: 'var(--color-text-muted)', fontSize: '12px', whiteSpace: 'nowrap' }}>
+                              {p.created_at ? new Date(p.created_at).toLocaleDateString('en-NP', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
+                            </td>
+                            {/* Actions */}
+                            <td style={{ padding: '12px 14px', textAlign: 'right' }}>
+                              <div style={{ display: 'flex', gap: '5px', justifyContent: 'flex-end', alignItems: 'center' }}>
+                                <button
+                                  onClick={() => openEditProduct(p)}
+                                  title="Edit product"
+                                  style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '7px', padding: '6px 8px', cursor: 'pointer', color: 'var(--color-blue)', display: 'flex', alignItems: 'center' }}
+                                >
+                                  <Edit2 size={14} />
+                                </button>
+                                <button
+                                  onClick={() => handleToggleAvailability(p)}
+                                  title={p.isAvailable ? 'Hide product from store' : 'Show product in store'}
+                                  style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '7px', padding: '6px 8px', cursor: 'pointer', color: p.isAvailable ? '#16a34a' : '#6b7280', display: 'flex', alignItems: 'center' }}
+                                >
+                                  {p.isAvailable ? <Eye size={14} /> : <EyeOff size={14} />}
+                                </button>
+                                <button
+                                  onClick={() => setDeleteConfirm(p)}
+                                  title="Delete product"
+                                  style={{ background: '#fff1f2', border: '1px solid #fecdd3', borderRadius: '7px', padding: '6px 8px', cursor: 'pointer', color: '#E11D48', display: 'flex', alignItems: 'center' }}
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             )}
 
@@ -874,44 +1245,262 @@ export default function Admin() {
         </div>
       </div>
 
-      {/* Add Product Modal */}
-      {showAddModal && (
-        <div className="search-overlay" style={{ paddingTop: '80px' }} onClick={() => setShowAddModal(false)}>
-          <div className="auth-card" style={{ maxWidth: '540px' }} onClick={e => e.stopPropagation()}>
-            <h2 className="auth-title" style={{ fontSize: '22px', marginBottom: '20px' }}>Add New Product</h2>
-            <form onSubmit={handleAddProduct}>
+      {/* ── PRODUCT ADD/EDIT MODAL ───────────────────────────────── */}
+      {showProductModal && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(10,14,30,0.55)', backdropFilter: 'blur(4px)', zIndex: 1000, overflowY: 'auto', padding: '24px 16px' }}
+          onClick={() => !productSaving && setShowProductModal(false)}
+        >
+          <div
+            style={{ background: 'var(--color-white)', borderRadius: '16px', maxWidth: '680px', margin: '0 auto', padding: '32px', boxShadow: '0 24px 64px rgba(0,0,0,0.22)', position: 'relative' }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Close btn */}
+            <button
+              onClick={() => !productSaving && setShowProductModal(false)}
+              style={{ position: 'absolute', top: '16px', right: '16px', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >
+              <X size={16} />
+            </button>
+
+            <div style={{ marginBottom: '24px' }}>
+              <div className="section-label" style={{ marginBottom: '6px' }}>{editingProduct ? 'Edit Product' : 'New Product'}</div>
+              <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', fontWeight: 700, color: 'var(--color-primary-navy)' }}>
+                {editingProduct ? `Edit: ${editingProduct.name}` : 'Add New Product'}
+              </h2>
+            </div>
+
+            {productFormError && (
+              <div style={{ background: '#fff1f2', border: '1px solid #fecdd3', color: '#E11D48', padding: '12px 14px', borderRadius: '9px', fontSize: '13px', marginBottom: '20px', display: 'flex', gap: '8px', alignItems: 'flex-start', lineHeight: 1.5 }}>
+                <AlertTriangle size={15} style={{ flexShrink: 0, marginTop: '1px' }} />
+                {productFormError}
+              </div>
+            )}
+
+            <form onSubmit={handleSaveProduct}>
+              {/* Row 1: Name */}
               <div className="form-group">
                 <label className="form-label">Product Name *</label>
-                <input className="form-input" placeholder="e.g. Vintage Gold Frame" value={newProduct.name} onChange={e => setNewProduct(p => ({ ...p, name: e.target.value }))} required />
+                <input
+                  className="form-input"
+                  placeholder="e.g. Classic Wooden Frame"
+                  value={productForm.name}
+                  onChange={e => setProductForm(f => ({ ...f, name: e.target.value }))}
+                />
               </div>
+
+              {/* Row 2: Category + Price */}
               <div className="form-row">
                 <div className="form-group">
-                  <label className="form-label">Category</label>
-                  <select className="form-input" value={newProduct.category} onChange={e => setNewProduct(p => ({ ...p, category: e.target.value }))}>
+                  <label className="form-label">Category *</label>
+                  <select className="form-input" value={productForm.category} onChange={e => setProductForm(f => ({ ...f, category: e.target.value }))}>
                     <option value="photo-frames">Photo Frames</option>
                     <option value="wedding-frames">Wedding Frames</option>
                     <option value="wall-art">Wall Art</option>
                     <option value="personalized-gifts">Personalized Gifts</option>
+                    <option value="collage-frames">Collage Frames</option>
                   </select>
                 </div>
                 <div className="form-group">
                   <label className="form-label">Price (NPR) *</label>
-                  <input type="number" className="form-input" placeholder="2500" value={newProduct.price} onChange={e => setNewProduct(p => ({ ...p, price: e.target.value }))} required />
+                  <input
+                    type="number" min="1" className="form-input" placeholder="2500"
+                    value={productForm.price}
+                    onChange={e => setProductForm(f => ({ ...f, price: e.target.value }))}
+                  />
                 </div>
               </div>
-              <div className="form-group">
-                <label className="form-label">Stock</label>
-                <input type="number" className="form-input" placeholder="20" value={newProduct.stock} onChange={e => setNewProduct(p => ({ ...p, stock: e.target.value }))} />
+
+              {/* Row 3: Original Price + Stock */}
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Original Price — for discount (NPR)</label>
+                  <input
+                    type="number" min="1" className="form-input" placeholder="Leave blank if no discount"
+                    value={productForm.original_price}
+                    onChange={e => setProductForm(f => ({ ...f, original_price: e.target.value }))}
+                  />
+                  <span style={{ fontSize: '11.5px', color: 'var(--color-text-muted)', marginTop: '4px', display: 'block' }}>Must be greater than selling price</span>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Stock Quantity</label>
+                  <input type="number" min="0" className="form-input" placeholder="50" value={productForm.stock} onChange={e => setProductForm(f => ({ ...f, stock: e.target.value }))} />
+                </div>
               </div>
+
+              {/* Description */}
               <div className="form-group">
                 <label className="form-label">Description</label>
-                <textarea className="form-input" rows={2} placeholder="Product details..." value={newProduct.description} onChange={e => setNewProduct(p => ({ ...p, description: e.target.value }))} />
+                <textarea
+                  className="form-input" rows={3}
+                  placeholder="Describe your product — materials, craftsmanship, ideal uses..."
+                  value={productForm.description}
+                  onChange={e => setProductForm(f => ({ ...f, description: e.target.value }))}
+                />
               </div>
-              <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
-                <button type="button" className="btn btn-outline" style={{ flex: 1 }} onClick={() => setShowAddModal(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Add Product</button>
+
+              {/* Sizes + Colors */}
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Frame Sizes</label>
+                  <input className="form-input" placeholder="4x6, 5x7, 8x10, 11x14" value={productForm.sizes} onChange={e => setProductForm(f => ({ ...f, sizes: e.target.value }))} />
+                  <span style={{ fontSize: '11.5px', color: 'var(--color-text-muted)', marginTop: '4px', display: 'block' }}>Comma separated (e.g. 4x6, 5x7, 8x10)</span>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Colors / Finishes</label>
+                  <input className="form-input" placeholder="Natural, Black, White, Walnut" value={productForm.colors} onChange={e => setProductForm(f => ({ ...f, colors: e.target.value }))} />
+                  <span style={{ fontSize: '11.5px', color: 'var(--color-text-muted)', marginTop: '4px', display: 'block' }}>Comma separated</span>
+                </div>
+              </div>
+
+              {/* Material + Frame Type */}
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Material</label>
+                  <input className="form-input" placeholder="e.g. Oak Wood, Metal, Acrylic" value={productForm.material} onChange={e => setProductForm(f => ({ ...f, material: e.target.value }))} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Frame Type</label>
+                  <select className="form-input" value={productForm.frame_type} onChange={e => setProductForm(f => ({ ...f, frame_type: e.target.value }))}>
+                    <option value="classic">Classic</option>
+                    <option value="modern">Modern</option>
+                    <option value="personalized">Personalized</option>
+                    <option value="collage">Collage</option>
+                    <option value="polaroid">Polaroid</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Toggles */}
+              <div style={{ display: 'flex', gap: '24px', marginBottom: '24px', flexWrap: 'wrap', padding: '14px', background: 'var(--color-surface)', borderRadius: '10px', border: '1px solid var(--color-border-light)' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '13.5px', fontWeight: 600, color: 'var(--color-dark)' }}>
+                  <button
+                    type="button"
+                    onClick={() => setProductForm(f => ({ ...f, is_featured: !f.is_featured }))}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', color: productForm.is_featured ? '#f59e0b' : 'var(--color-text-muted)' }}
+                  >
+                    {productForm.is_featured ? <ToggleRight size={28} /> : <ToggleLeft size={28} />}
+                  </button>
+                  <Star size={15} fill={productForm.is_featured ? '#f59e0b' : 'none'} color={productForm.is_featured ? '#f59e0b' : 'var(--color-text-muted)'} />
+                  Featured Product
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '13.5px', fontWeight: 600, color: 'var(--color-dark)' }}>
+                  <button
+                    type="button"
+                    onClick={() => setProductForm(f => ({ ...f, is_available: !f.is_available }))}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', color: productForm.is_available ? '#16a34a' : 'var(--color-text-muted)' }}
+                  >
+                    {productForm.is_available ? <ToggleRight size={28} /> : <ToggleLeft size={28} />}
+                  </button>
+                  {productForm.is_available ? <Eye size={15} color="#16a34a" /> : <EyeOff size={15} color="var(--color-text-muted)" />}
+                  {productForm.is_available ? 'Available in store' : 'Hidden from store'}
+                </label>
+              </div>
+
+              {/* Image upload */}
+              <div className="form-group">
+                <label className="form-label">Product Images * <span style={{ fontWeight: 400, color: 'var(--color-text-muted)', fontSize: '12px' }}>(JPEG / PNG / WebP, max 5MB each)</span></label>
+                <div
+                  onClick={() => imageInputRef.current?.click()}
+                  style={{ border: '2px dashed var(--color-border)', borderRadius: '10px', padding: '20px', textAlign: 'center', cursor: 'pointer', background: 'var(--color-surface)', transition: 'border-color 0.2s' }}
+                  onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--color-blue)'}
+                  onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--color-border)'}
+                >
+                  <ImagePlus size={24} color="var(--color-blue)" style={{ margin: '0 auto 8px' }} />
+                  <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-dark)', marginBottom: '4px' }}>Click to upload images</div>
+                  <div style={{ fontSize: '12.5px', color: 'var(--color-text-muted)' }}>First image will be used as the primary photo</div>
+                  <input
+                    ref={imageInputRef}
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+                    multiple
+                    style={{ display: 'none' }}
+                    onChange={handleProductImageSelect}
+                  />
+                </div>
+
+                {/* Image previews */}
+                {productImages.length > 0 && (
+                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '14px' }}>
+                    {productImages.map((img, idx) => (
+                      <div key={idx} style={{ position: 'relative', width: '80px', height: '80px', borderRadius: '8px', overflow: 'hidden', border: idx === 0 ? '2px solid var(--color-blue)' : '1px solid var(--color-border)', flexShrink: 0 }}>
+                        <img src={img.preview || img.url} alt={`preview-${idx}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        {idx === 0 && (
+                          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(23,42,114,0.85)', color: '#fff', fontSize: '9px', fontWeight: 700, textAlign: 'center', padding: '2px' }}>MAIN</div>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => removeProductImage(idx)}
+                          style={{ position: 'absolute', top: '3px', right: '3px', background: 'rgba(220,38,38,0.9)', border: 'none', borderRadius: '50%', width: '18px', height: '18px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}
+                        >
+                          <X size={10} />
+                        </button>
+                      </div>
+                    ))}
+                    {/* Add more button */}
+                    <div
+                      onClick={() => imageInputRef.current?.click()}
+                      style={{ width: '80px', height: '80px', borderRadius: '8px', border: '2px dashed var(--color-border)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, color: 'var(--color-text-muted)', gap: '4px', fontSize: '11px' }}
+                    >
+                      <Plus size={18} />
+                      Add more
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Buttons */}
+              <div style={{ display: 'flex', gap: '12px', marginTop: '8px', paddingTop: '20px', borderTop: '1px solid var(--color-border-light)' }}>
+                <button type="button" className="btn btn-outline" style={{ flex: 1 }} onClick={() => setShowProductModal(false)} disabled={productSaving}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary" style={{ flex: 2 }} disabled={productSaving}>
+                  {productSaving ? (
+                    <><span style={{ display: 'inline-block', width: '14px', height: '14px', border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite', verticalAlign: 'middle', marginRight: '6px' }} />
+                    {editingProduct ? 'Saving changes...' : 'Adding product...'}</>
+                  ) : (
+                    <>{editingProduct ? <><CheckCircle size={15} /> Save Changes</> : <><Plus size={15} /> Add Product</>}</>
+                  )}
+                </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── DELETE CONFIRMATION MODAL ───────────────────────────── */}
+      {deleteConfirm && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(10,14,30,0.55)', backdropFilter: 'blur(4px)', zIndex: 1001, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
+          onClick={() => !deleting && setDeleteConfirm(null)}
+        >
+          <div
+            style={{ background: 'var(--color-white)', borderRadius: '16px', padding: '32px', maxWidth: '440px', width: '100%', boxShadow: '0 24px 64px rgba(0,0,0,0.22)', textAlign: 'center' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ width: '56px', height: '56px', background: '#fff1f2', borderRadius: '50%', margin: '0 auto 20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Trash2 size={24} color="#E11D48" />
+            </div>
+            <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', fontWeight: 700, marginBottom: '10px', color: 'var(--color-dark)' }}>Delete Product?</h3>
+            <p style={{ color: 'var(--color-text-muted)', fontSize: '14px', lineHeight: 1.6, marginBottom: '8px' }}>
+              Are you sure you want to delete <strong style={{ color: 'var(--color-dark)' }}>"{deleteConfirm.name}"</strong>?
+            </p>
+            <p style={{ color: 'var(--color-text-muted)', fontSize: '12.5px', marginBottom: '28px' }}>
+              This action cannot be undone. Existing orders referencing this product will remain safe.
+            </p>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button className="btn btn-outline" style={{ flex: 1 }} onClick={() => setDeleteConfirm(null)} disabled={deleting}>
+                Cancel
+              </button>
+              <button
+                className="btn"
+                style={{ flex: 1, background: '#E11D48', color: '#fff', border: 'none', cursor: 'pointer', padding: '10px' }}
+                onClick={handleConfirmDelete}
+                disabled={deleting}
+              >
+                {deleting ? 'Deleting...' : 'Delete Product'}
+              </button>
+            </div>
           </div>
         </div>
       )}

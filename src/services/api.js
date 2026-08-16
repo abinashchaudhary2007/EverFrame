@@ -567,3 +567,468 @@ export async function markContactRead(id) {
     console.error('Mark Contact Read Error:', err);
   }
 }
+
+// =====================================================
+// PRODUCT MANAGEMENT FUNCTIONS
+// =====================================================
+
+// Normalize a Supabase product row to match the shape expected by components
+export function normalizeProduct(p) {
+  if (!p) return null;
+  return {
+    ...p,
+    categoryLabel: p.category_label || p.categoryLabel || '',
+    originalPrice: p.original_price ?? p.originalPrice ?? null,
+    discount: p.discount ?? null,
+    isFeatured: p.is_featured ?? p.isFeatured ?? false,
+    isAvailable: p.is_available !== false, // default true
+    reviewCount: p.review_count ?? p.reviewCount ?? 0,
+    frameType: p.frame_type || p.frameType || '',
+    images: Array.isArray(p.images) ? p.images : (p.images ? [p.images] : []),
+    sizes: Array.isArray(p.sizes) ? p.sizes : [],
+    colors: Array.isArray(p.colors) ? p.colors : [],
+    slug: p.slug || '',
+    stock: p.stock ?? 50,
+    rating: p.rating ?? 5.0,
+  };
+}
+
+// Fetch all products for ADMIN (includes unavailable ones)
+export async function getAdminProducts() {
+  if (!isSupabaseConfigured || !supabase) {
+    return localProducts.map(normalizeProduct);
+  }
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return (data || []).map(normalizeProduct);
+  } catch (err) {
+    console.error('Get Admin Products Error:', err);
+    return localProducts.map(normalizeProduct);
+  }
+}
+
+// Fetch only AVAILABLE products for customer-facing pages
+export async function getPublicProducts() {
+  if (!isSupabaseConfigured || !supabase) {
+    return { data: localProducts.map(normalizeProduct), source: 'local' };
+  }
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .eq('is_available', true)
+      .order('created_at', { ascending: false });
+    if (error || !data || data.length === 0) {
+      return { data: localProducts.map(normalizeProduct), source: 'local' };
+    }
+    return { data: data.map(normalizeProduct), source: 'supabase' };
+  } catch (err) {
+    console.error('Get Public Products Error:', err);
+    return { data: localProducts.map(normalizeProduct), source: 'local' };
+  }
+}
+
+// Fetch a single product by slug (customer-facing, must be available)
+export async function getProductBySlug(slug) {
+  if (!isSupabaseConfigured || !supabase) {
+    const found = localProducts.find(p => p.slug === slug);
+    return found ? normalizeProduct(found) : null;
+  }
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .eq('slug', slug)
+      .eq('is_available', true)
+      .maybeSingle();
+    if (error) throw error;
+    return data ? normalizeProduct(data) : null;
+  } catch (err) {
+    console.error('Get Product By Slug Error:', err);
+    const found = localProducts.find(p => p.slug === slug);
+    return found ? normalizeProduct(found) : null;
+  }
+}
+
+// Upload a product image to Supabase Storage (product-images bucket)
+export async function uploadProductImage(file) {
+  if (!isSupabaseConfigured || !supabase) {
+    return { url: URL.createObjectURL(file), source: 'local' };
+  }
+  try {
+    const ext = file.name.split('.').pop();
+    const fileName = `product-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const { error: uploadError } = await supabase.storage
+      .from('product-images')
+      .upload(fileName, file, { cacheControl: '3600', upsert: false });
+    if (uploadError) throw uploadError;
+    const { data } = supabase.storage.from('product-images').getPublicUrl(fileName);
+    return { url: data.publicUrl, source: 'supabase' };
+  } catch (err) {
+    console.error('Upload Product Image Error:', err);
+    return { url: URL.createObjectURL(file), source: 'local' };
+  }
+}
+
+// Generate a URL-safe slug from a product name
+function generateSlug(name) {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
+}
+
+// Create a new product (Admin)
+export async function createProduct(formData, imageFiles = []) {
+  // Upload images first
+  const imageUrls = [];
+  for (const file of imageFiles) {
+    if (file instanceof File) {
+      const { url } = await uploadProductImage(file);
+      imageUrls.push(url);
+    } else if (typeof file === 'string') {
+      imageUrls.push(file);
+    }
+  }
+
+  let slug = generateSlug(formData.name);
+  if (!slug) slug = `product-${Date.now()}`;
+
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data: existingSlug } = await supabase
+        .from('products')
+        .select('id')
+        .eq('slug', slug)
+        .maybeSingle();
+      if (existingSlug) {
+        slug = `${slug}-${Math.random().toString(36).slice(2, 6)}`;
+      }
+    } catch {}
+  }
+
+  const payload = {
+    name: formData.name.trim(),
+    slug,
+    category: formData.category,
+    category_label: formData.category_label || formData.categoryLabel || formData.category.replace(/-/g, ' ').toUpperCase(),
+    price: parseFloat(formData.price),
+    original_price: formData.original_price ? parseFloat(formData.original_price) : null,
+    discount: formData.original_price && formData.price
+      ? Math.round(((parseFloat(formData.original_price) - parseFloat(formData.price)) / parseFloat(formData.original_price)) * 100)
+      : null,
+    description: formData.description || '',
+    images: imageUrls.length > 0 ? imageUrls : ['https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=600&q=80'],
+    sizes: Array.isArray(formData.sizes) ? formData.sizes : (formData.sizes ? formData.sizes.split(',').map(s => s.trim()).filter(Boolean) : ['5x7', '8x10']),
+    colors: Array.isArray(formData.colors) ? formData.colors : (formData.colors ? formData.colors.split(',').map(c => c.trim()).filter(Boolean) : ['Natural']),
+    material: formData.material || 'Wood',
+    frame_type: formData.frame_type || 'classic',
+    badge: formData.badge || null,
+    is_featured: Boolean(formData.is_featured),
+    is_available: formData.is_available !== false,
+    rating: 5.0,
+    review_count: 0,
+    stock: parseInt(formData.stock) || 50,
+  };
+
+  if (!isSupabaseConfigured || !supabase) {
+    const newProduct = { ...payload, id: Date.now(), created_at: new Date().toISOString() };
+    try {
+      const local = JSON.parse(localStorage.getItem('everframe_products') || '[]');
+      localStorage.setItem('everframe_products', JSON.stringify([newProduct, ...local]));
+    } catch {}
+    return { success: true, product: normalizeProduct(newProduct) };
+  }
+
+  try {
+    let { data, error } = await supabase
+      .from('products')
+      .insert([payload])
+      .select()
+      .single();
+
+    // Auto-fix if PostgreSQL BIGSERIAL sequence is behind initial seed IDs (products_pkey error)
+    if (error && (error.message?.includes('products_pkey') || error.code === '23505')) {
+      const { data: maxRow } = await supabase
+        .from('products')
+        .select('id')
+        .order('id', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const nextId = (maxRow?.id ? Number(maxRow.id) : 10) + 1;
+      const retryResult = await supabase
+        .from('products')
+        .insert([{ ...payload, id: nextId }])
+        .select()
+        .single();
+
+      if (!retryResult.error && retryResult.data) {
+        return { success: true, product: normalizeProduct(retryResult.data) };
+      }
+      error = retryResult.error || error;
+    }
+
+    if (error) throw error;
+    return { success: true, product: normalizeProduct(data) };
+  } catch (err) {
+    console.error('Create Product Error:', err);
+    let msg = err?.message || 'Failed to create product';
+    if (err?.message?.includes('products_slug_key')) {
+      msg = 'A product with this URL slug already exists. Please modify the name slightly.';
+    }
+    return { success: false, error: msg };
+  }
+}
+
+// Update an existing product (Admin)
+export async function updateProduct(id, formData, newImageFiles = []) {
+  // Handle image uploads — keep existing URLs, upload new File objects
+  const imageUrls = [];
+  for (const file of newImageFiles) {
+    if (file instanceof File) {
+      const { url } = await uploadProductImage(file);
+      imageUrls.push(url);
+    } else if (typeof file === 'string') {
+      imageUrls.push(file);
+    }
+  }
+
+  const updates = {
+    name: formData.name.trim(),
+    category: formData.category,
+    category_label: formData.category_label || formData.categoryLabel || formData.category.replace(/-/g, ' ').toUpperCase(),
+    price: parseFloat(formData.price),
+    original_price: formData.original_price ? parseFloat(formData.original_price) : null,
+    discount: formData.original_price && formData.price
+      ? Math.round(((parseFloat(formData.original_price) - parseFloat(formData.price)) / parseFloat(formData.original_price)) * 100)
+      : null,
+    description: formData.description || '',
+    material: formData.material || 'Wood',
+    frame_type: formData.frame_type || 'classic',
+    sizes: Array.isArray(formData.sizes) ? formData.sizes : (formData.sizes ? formData.sizes.split(',').map(s => s.trim()).filter(Boolean) : []),
+    colors: Array.isArray(formData.colors) ? formData.colors : (formData.colors ? formData.colors.split(',').map(c => c.trim()).filter(Boolean) : []),
+    is_featured: Boolean(formData.is_featured),
+    is_available: formData.is_available !== false,
+    stock: parseInt(formData.stock) || 50,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (imageUrls.length > 0) {
+    updates.images = imageUrls;
+  }
+
+  if (!isSupabaseConfigured || !supabase) {
+    try {
+      const local = JSON.parse(localStorage.getItem('everframe_products') || '[]');
+      const updated = local.map(p => p.id === id ? { ...p, ...updates } : p);
+      localStorage.setItem('everframe_products', JSON.stringify(updated));
+    } catch {}
+    return { success: true };
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return { success: true, product: normalizeProduct(data) };
+  } catch (err) {
+    console.error('Update Product Error:', err);
+    return { success: false, error: err?.message || 'Failed to update product' };
+  }
+}
+
+// Delete a product (Admin) — hard delete (order_items stores product_name text so history is safe)
+export async function deleteProduct(id) {
+  if (!isSupabaseConfigured || !supabase) {
+    try {
+      const local = JSON.parse(localStorage.getItem('everframe_products') || '[]');
+      localStorage.setItem('everframe_products', JSON.stringify(local.filter(p => p.id !== id)));
+    } catch {}
+    return { success: true };
+  }
+  try {
+    const { error } = await supabase.from('products').delete().eq('id', id);
+    if (error) throw error;
+    return { success: true };
+  } catch (err) {
+    console.error('Delete Product Error:', err);
+    return { success: false, error: err?.message || 'Failed to delete product' };
+  }
+}
+
+// Toggle product availability (hide/show from customer pages)
+export async function toggleProductAvailability(id, isAvailable) {
+  if (!isSupabaseConfigured || !supabase) {
+    try {
+      const local = JSON.parse(localStorage.getItem('everframe_products') || '[]');
+      localStorage.setItem('everframe_products', JSON.stringify(local.map(p => p.id === id ? { ...p, is_available: isAvailable } : p)));
+    } catch {}
+    return { success: true };
+  }
+  try {
+    const { error } = await supabase
+      .from('products')
+      .update({ is_available: isAvailable, updated_at: new Date().toISOString() })
+      .eq('id', id);
+    if (error) throw error;
+    return { success: true };
+  } catch (err) {
+    console.error('Toggle Product Availability Error:', err);
+    return { success: false, error: err?.message || 'Failed to update availability' };
+  }
+}
+
+// Toggle product featured status
+export async function toggleProductFeatured(id, isFeatured) {
+  if (!isSupabaseConfigured || !supabase) {
+    try {
+      const local = JSON.parse(localStorage.getItem('everframe_products') || '[]');
+      localStorage.setItem('everframe_products', JSON.stringify(local.map(p => p.id === id ? { ...p, is_featured: isFeatured, isFeatured } : p)));
+    } catch {}
+    return { success: true };
+  }
+  try {
+    const { error } = await supabase
+      .from('products')
+      .update({ is_featured: isFeatured, updated_at: new Date().toISOString() })
+      .eq('id', id);
+    if (error) throw error;
+    return { success: true };
+  } catch (err) {
+    console.error('Toggle Product Featured Error:', err);
+    return { success: false, error: err?.message || 'Failed to update featured status' };
+  }
+}
+
+// =====================================================
+// PRODUCT REVIEWS & COMMENTS API
+// =====================================================
+
+const DEFAULT_SAMPLE_REVIEWS = [
+  {
+    id: 'sample-1',
+    product_slug: 'classic-wooden-frame',
+    user_name: 'Aarav Sharma',
+    rating: 5,
+    title: 'Superior craftsmanship!',
+    comment: 'The oak wood finish is stunning and arrived securely packaged in Kathmandu within 2 days. Fits our family portrait perfectly.',
+    is_verified: true,
+    created_at: new Date(Date.now() - 3 * 86400000).toISOString(),
+  },
+  {
+    id: 'sample-2',
+    product_slug: 'classic-wooden-frame',
+    user_name: 'Pooja Thapa',
+    rating: 5,
+    title: 'Beautiful frame, museum quality glass',
+    comment: 'Ordered this for our 5th anniversary portrait. Looks very elegant and premium on our living room wall.',
+    is_verified: true,
+    created_at: new Date(Date.now() - 8 * 86400000).toISOString(),
+  },
+  {
+    id: 'sample-3',
+    product_slug: 'premium-black-frame',
+    user_name: 'Sujan Shrestha',
+    rating: 5,
+    title: 'Minimalist & modern design',
+    comment: 'The matte black edge gives artwork a sleek gallery vibe. High quality at a very reasonable price.',
+    is_verified: true,
+    created_at: new Date(Date.now() - 5 * 86400000).toISOString(),
+  },
+  {
+    id: 'sample-4',
+    product_slug: 'couple-memory-frame',
+    user_name: 'Bikash & Anjali',
+    rating: 5,
+    title: 'Best gift ever ❤️',
+    comment: 'Custom engraved with our wedding date. The recipient absolutely loved it! Will definitely order again.',
+    is_verified: true,
+    created_at: new Date(Date.now() - 2 * 86400000).toISOString(),
+  }
+];
+
+// Fetch reviews for a specific product
+export async function getProductReviews(productSlug, productId) {
+  let list = [];
+  const cleanSlug = (productSlug || '').toLowerCase().trim();
+
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('reviews')
+        .select('*')
+        .or(`product_slug.eq.${cleanSlug}${productId ? `,product_id.eq.${productId}` : ''}`)
+        .order('created_at', { ascending: false });
+
+      if (!error && data && data.length > 0) {
+        return data;
+      }
+    } catch (err) {
+      console.error('Fetch Reviews Error:', err);
+    }
+  }
+
+  // Local fallback
+  try {
+    const saved = JSON.parse(localStorage.getItem('everframe_reviews') || '[]');
+    const localMatches = saved.filter(r => r.product_slug === cleanSlug || (productId && r.product_id === productId));
+    const sampleMatches = DEFAULT_SAMPLE_REVIEWS.filter(r => r.product_slug === cleanSlug);
+    list = [...localMatches, ...sampleMatches];
+  } catch {
+    list = DEFAULT_SAMPLE_REVIEWS.filter(r => r.product_slug === cleanSlug);
+  }
+
+  return list;
+}
+
+// Submit a new review
+export async function createProductReview(reviewData) {
+  const payload = {
+    product_slug: (reviewData.product_slug || '').toLowerCase().trim(),
+    product_id: reviewData.product_id || null,
+    user_name: reviewData.user_name.trim(),
+    user_email: reviewData.user_email?.trim() || null,
+    rating: parseInt(reviewData.rating) || 5,
+    title: reviewData.title?.trim() || '',
+    comment: reviewData.comment.trim(),
+    is_verified: true,
+    created_at: new Date().toISOString(),
+  };
+
+  // Always save to localStorage for instant local access
+  try {
+    const local = JSON.parse(localStorage.getItem('everframe_reviews') || '[]');
+    const localEntry = { ...payload, id: `rev-${Date.now()}` };
+    localStorage.setItem('everframe_reviews', JSON.stringify([localEntry, ...local]));
+  } catch (e) {
+    console.error('Save local review error:', e);
+  }
+
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('reviews')
+        .insert([payload])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return { success: true, review: data };
+    } catch (err) {
+      console.error('Supabase Create Review Error:', err);
+    }
+  }
+
+  return { success: true, review: { ...payload, id: `rev-${Date.now()}` } };
+}
