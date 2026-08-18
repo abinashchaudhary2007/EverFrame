@@ -268,71 +268,104 @@ export default function Checkout() {
 
     const handlePrint = () => {
       const win = window.open('', '_blank');
+      const origin = window.location.origin;
       win.document.write(`
         <!DOCTYPE html>
         <html><head><title>EverFrame Invoice #${od.orderNumber}</title>
         <style>
-          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 36px; max-width: 620px; margin: 0 auto; color: #111; }
-          .header-row { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px; }
-          .logo { font-size:24px; font-weight:900; color:#172A72; letter-spacing:-0.5px; }
-          .tagline { font-size:11.5px; color:#6b7280; margin-top:2px; }
+          @page { size: A4 portrait; margin: 15mm; }
+          * { box-sizing: border-box; }
+          body { font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif; padding: 24px; max-width: 680px; margin: 0 auto; color: #0f172a; background: #ffffff; }
+          .header-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding-bottom: 16px; border-bottom: 2px solid #172A72; }
+          .brand-box { display:flex; align-items:center; gap:12px; }
+          .logo-img { width:48px; height:48px; object-fit:contain; border-radius:50%; }
+          .logo-text { font-size:24px; font-weight:900; color:#172A72; letter-spacing:-0.5px; }
+          .tagline { font-size:11px; color:#64748b; margin-top:2px; }
           .invoice-title { font-size:13px; font-weight:800; text-transform:uppercase; letter-spacing:0.08em; color:#172A72; text-align:right; }
-          .invoice-meta { font-size:12px; color:#6b7280; margin-top:3px; text-align:right; line-height:1.6; }
-          .divider { border:none; border-top:1.5px solid #e5e7eb; margin:20px 0; }
+          .invoice-num { font-size:20px; font-weight:900; color:#0f172a; margin-top:2px; }
+          .invoice-meta { font-size:11.5px; color:#64748b; margin-top:3px; text-align:right; line-height:1.5; }
           .section-title { font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.08em; color:#172A72; margin-bottom:6px; }
-          .info-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:28px; }
-          .info-label { font-size:11px; color:#9ca3af; margin-bottom:2px; }
-          .info-value { font-size:13.5px; font-weight:600; color:#111; }
+          .info-grid { display:grid; grid-template-columns:1.2fr 0.8fr; gap:20px; margin-bottom:24px; background:#f8fafc; padding:16px; border-radius:10px; border:1px solid #e2e8f0; }
+          .info-label { font-size:10.5px; color:#64748b; margin-bottom:2px; text-transform:uppercase; font-weight:700; }
+          .info-value { font-size:14px; font-weight:700; color:#0f172a; }
           table { width:100%; border-collapse:collapse; margin-bottom:20px; }
-          th { font-size:11px; text-transform:uppercase; color:#9ca3af; font-weight:700; text-align:left; padding:8px 0; border-bottom:1.5px solid #e5e7eb; }
-          td { font-size:13px; padding:12px 0; border-bottom:1px solid #f3f4f6; vertical-align:top; }
-          .total-row { display:flex; justify-content:space-between; font-size:13px; padding:6px 0; }
-          .grand-total { display:flex; justify-content:space-between; font-size:17px; font-weight:800; color:#172A72; padding-top:12px; border-top:2px solid #172A72; margin-top:6px; }
-          .footer { margin-top:32px; text-align:center; font-size:11.5px; color:#9ca3af; line-height:1.8; }
-          .badge { display:inline-block; background:#dcfce7; color:#16a34a; font-size:11px; font-weight:700; padding:3px 10px; border-radius:20px; }
+          th { font-size:11px; text-transform:uppercase; color:#64748b; font-weight:800; text-align:left; padding:10px 8px; border-bottom:2px solid #cbd5e1; background:#f1f5f9; }
+          td { font-size:13px; padding:12px 8px; border-bottom:1px solid #e2e8f0; vertical-align:middle; }
+          .total-box { max-width:280px; margin-left:auto; background:#f8fafc; padding:16px; border-radius:10px; border:1px solid #e2e8f0; }
+          .total-row { display:flex; justify-content:space-between; font-size:13px; padding:5px 0; color:#475569; }
+          .grand-total { display:flex; justify-content:space-between; font-size:17px; font-weight:900; color:#172A72; padding-top:10px; border-top:2px solid #172A72; margin-top:6px; }
+          .footer { margin-top:30px; text-align:center; font-size:11px; color:#94a3b8; line-height:1.7; border-top:1px solid #e2e8f0; padding-top:16px; }
+          .badge { display:inline-block; background:#dcfce7; color:#15803d; font-size:11px; font-weight:800; padding:4px 10px; border-radius:20px; border:1px solid #bbf7d0; }
         </style></head><body>
           <div class="header-row">
-            <div><div class="logo">EverFrame</div><div class="tagline">Premium Custom Photo Frames · Nepal</div></div>
-            <div><div class="invoice-title">INVOICE</div><div class="invoice-meta">
-              Order #${od.orderNumber}<br/>
-              ${od.placedAt.toLocaleDateString('en-NP', {day:'numeric',month:'long',year:'numeric'})}<br/>
-              ${od.placedAt.toLocaleTimeString('en-NP', {hour:'2-digit',minute:'2-digit'})}
-            </div></div>
+            <div class="brand-box">
+              <img class="logo-img" src="${origin}/logo.png" alt="EverFrame" onerror="this.style.display='none'" />
+              <div>
+                <div class="logo-text">EverFrame</div>
+                <div class="tagline">Premium Custom Photo Frames · Kathmandu, Nepal</div>
+              </div>
+            </div>
+            <div>
+              <div class="invoice-title">OFFICIAL INVOICE</div>
+              <div class="invoice-num">#${od.orderNumber}</div>
+              <div class="invoice-meta">
+                Date: ${od.placedAt.toLocaleDateString('en-NP', {day:'numeric',month:'long',year:'numeric'})}<br/>
+                Time: ${od.placedAt.toLocaleTimeString('en-NP', {hour:'2-digit',minute:'2-digit'})}
+              </div>
+            </div>
           </div>
-          <hr class="divider"/>
+          
           <div class="info-grid">
             <div>
-              <div class="section-title">Bill To</div>
+              <div class="section-title">Bill To & Delivery Address</div>
               <div class="info-value">${od.name}</div>
-              <div style="font-size:13px;color:#4b5563;margin-top:4px;line-height:1.7">${od.phone}${od.email ? '<br/>'+od.email : ''}<br/>${od.address}<br/>${od.city}, Nepal</div>
+              <div style="font-size:12.5px;color:#334155;margin-top:4px;line-height:1.6">
+                📞 ${od.phone}${od.email ? '<br/>✉️ '+od.email : ''}<br/>
+                📍 ${od.address}<br/>
+                ${od.city}, Nepal
+              </div>
             </div>
             <div>
-              <div class="section-title">Payment</div>
-              <div class="badge">${od.paymentMethod === 'cod' ? 'Cash on Delivery' : od.paymentMethod}</div>
+              <div class="section-title">Order Status</div>
+              <div style="margin-bottom:8px;"><span class="badge">${od.paymentMethod === 'cod' ? '💵 Cash on Delivery' : od.paymentMethod}</span></div>
+              <div style="font-size:11.5px;color:#64748b;">Delivery Status: <strong style="color:#0f172a;">Confirmed & Processing</strong></div>
+              <div style="font-size:11.5px;color:#64748b;margin-top:2px;">Estimated: <strong style="color:#0f172a;">2-3 Business Days</strong></div>
             </div>
           </div>
-          <hr class="divider"/>
+
           <table>
-            <thead><tr><th>Item</th><th style="text-align:center">Qty</th><th style="text-align:right">Unit Price</th><th style="text-align:right">Total</th></tr></thead>
+            <thead>
+              <tr>
+                <th>Item Details</th>
+                <th style="text-align:center">Qty</th>
+                <th style="text-align:right">Price</th>
+                <th style="text-align:right">Total</th>
+              </tr>
+            </thead>
             <tbody>${od.items.map(item => `
               <tr>
-                <td><div style="font-weight:600">${item.name}</div>${item.variant?.size || item.variant?.color ? '<div style="font-size:11.5px;color:#9ca3af;margin-top:2px">' + [item.variant?.size, item.variant?.color].filter(Boolean).join(' · ') + '</div>' : ''}</td>
-                <td style="text-align:center">${item.quantity}</td>
-                <td style="text-align:right">NPR ${item.price.toLocaleString()}</td>
-                <td style="text-align:right">NPR ${(item.price * item.quantity).toLocaleString()}</td>
+                <td>
+                  <div style="font-weight:700;color:#0f172a">${item.name}</div>
+                  ${item.variant?.size || item.variant?.color ? '<div style="font-size:11.5px;color:#64748b;margin-top:2px">' + [item.variant?.size, item.variant?.color].filter(Boolean).join(' · ') + '</div>' : ''}
+                </td>
+                <td style="text-align:center;font-weight:600">${item.quantity}</td>
+                <td style="text-align:right;color:#475569">NPR ${item.price.toLocaleString()}</td>
+                <td style="text-align:right;font-weight:700;color:#0f172a">NPR ${(item.price * item.quantity).toLocaleString()}</td>
               </tr>`).join('')}
             </tbody>
           </table>
-          <div style="max-width:260px;margin-left:auto">
-            <div class="total-row"><span style="color:#6b7280">Subtotal</span><span>NPR ${od.subtotal.toLocaleString()}</span></div>
-            <div class="total-row"><span style="color:#6b7280">Delivery Charge</span><span>NPR ${od.deliveryCharge}</span></div>
-            ${od.discountAmount > 0 ? `<div class="total-row"><span style="color:#16a34a">Coupon (${od.couponCode})</span><span style="color:#16a34a">− NPR ${od.discountAmount.toLocaleString()}</span></div>` : ''}
-            <div class="grand-total"><span>TOTAL</span><span>NPR ${od.total.toLocaleString()}</span></div>
+
+          <div class="total-box">
+            <div class="total-row"><span>Subtotal</span><span style="font-weight:600;color:#0f172a">NPR ${od.subtotal.toLocaleString()}</span></div>
+            <div class="total-row"><span>Delivery Charge</span><span style="font-weight:600;color:#0f172a">${od.deliveryCharge === 0 ? '<span style="color:#16a34a;font-weight:700">FREE</span>' : `NPR ${od.deliveryCharge}`}</span></div>
+            ${od.discountAmount > 0 ? `<div class="total-row"><span style="color:#16a34a">Coupon (${od.couponCode})</span><span style="color:#16a34a;font-weight:700">− NPR ${od.discountAmount.toLocaleString()}</span></div>` : ''}
+            <div class="grand-total"><span>Grand Total</span><span>NPR ${od.total.toLocaleString()}</span></div>
           </div>
+
           <div class="footer">
-            Thank you for shopping with EverFrame!<br/>
-            For support: everframe.np@gmail.com · Track your order at everframe.com/track-order<br/>
-            <strong style="color:#172A72">Your frames are lovingly crafted in Nepal 🇳🇵</strong>
+            Thank you for shopping with <strong>EverFrame Nepal</strong>! ❤️<br/>
+            Need help? Email us at <strong>everframe.np@gmail.com</strong> · Track status at <strong>everframe.com/track-order</strong><br/>
+            <em>Crafted with love & precision in Nepal 🇳🇵</em>
           </div>
         </body></html>
       `);
@@ -343,7 +376,7 @@ export default function Checkout() {
 
     return (
       <div style={{ background: 'var(--color-bg)', minHeight: '100vh', padding: '40px 20px' }}>
-        <div style={{ maxWidth: '620px', margin: '0 auto' }}>
+        <div style={{ maxWidth: '640px', margin: '0 auto' }}>
 
           {/* Celebration Success Header */}
           <div style={{ textAlign: 'center', marginBottom: '28px' }}>
@@ -368,80 +401,102 @@ export default function Checkout() {
           </div>
 
           {/* Bill / Invoice Card */}
-          <div id="everframe-bill" style={{ background: 'var(--color-white)', borderRadius: '16px', border: '1px solid var(--color-border-light)', boxShadow: 'var(--shadow-card)', overflow: 'hidden' }}>
+          <div id="everframe-bill" style={{ background: 'var(--color-white)', borderRadius: '18px', border: '1px solid var(--color-border-light)', boxShadow: 'var(--shadow-card)', overflow: 'hidden' }}>
 
-            {/* Bill header */}
-            <div style={{ background: 'var(--brand-gradient)', padding: '22px 28px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div>
-                <div style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', fontWeight: 900, color: '#fff', letterSpacing: '-0.5px' }}>EverFrame</div>
-                <div style={{ fontSize: '11.5px', color: 'rgba(255,255,255,0.75)', marginTop: '2px' }}>Premium Custom Photo Frames · Nepal</div>
+            {/* Bill Header with EverFrame Logo */}
+            <div style={{ background: 'var(--brand-gradient)', padding: '22px 26px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '46px', height: '46px', borderRadius: '50%', background: '#ffffff', padding: '3px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
+                  <img src="/logo.png" alt="EverFrame" style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '50%' }} onError={(e) => { e.target.style.display = 'none'; }} />
+                </div>
+                <div>
+                  <div style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', fontWeight: 900, color: '#fff', letterSpacing: '-0.5px' }}>EverFrame</div>
+                  <div style={{ fontSize: '11.5px', color: 'rgba(255,255,255,0.85)', marginTop: '1px' }}>Premium Custom Photo Frames · Nepal</div>
+                </div>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Invoice</div>
-                <div style={{ fontWeight: 800, fontSize: '18px', color: '#fff', marginTop: '2px' }}>#{od.orderNumber}</div>
-                <div style={{ fontSize: '11.5px', color: 'rgba(255,255,255,0.75)', marginTop: '2px' }}>
+                <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700 }}>Official Invoice</div>
+                <div style={{ fontWeight: 900, fontSize: '18px', color: '#fff', marginTop: '2px' }}>#{od.orderNumber}</div>
+                <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.8)', marginTop: '2px' }}>
                   {od.placedAt.toLocaleDateString('en-NP', { day: 'numeric', month: 'short', year: 'numeric' })} · {od.placedAt.toLocaleTimeString('en-NP', { hour: '2-digit', minute: '2-digit' })}
                 </div>
               </div>
             </div>
 
-            <div style={{ padding: '24px 28px' }}>
+            <div style={{ padding: '24px 26px' }}>
 
-              {/* Customer info + Payment */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '22px', paddingBottom: '18px', borderBottom: '1px solid var(--color-border-light)' }}>
+              {/* Customer Info & Status Grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '18px', marginBottom: '22px', paddingBottom: '18px', borderBottom: '1px solid var(--color-border-light)' }}>
                 <div>
-                  <div style={{ fontSize: '10.5px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-text-muted)', marginBottom: '8px' }}>Bill To</div>
-                  <div style={{ fontWeight: 700, fontSize: '14.5px', color: 'var(--color-dark)' }}>{od.name}</div>
-                  <div style={{ fontSize: '13px', color: 'var(--color-text-muted)', marginTop: '4px', lineHeight: 1.7 }}>
-                    {od.phone}<br />
-                    {od.email && <>{od.email}<br /></>}
-                    {od.address}<br />
+                  <div style={{ fontSize: '10.5px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-text-muted)', marginBottom: '6px' }}>Bill To & Delivery Address</div>
+                  <div style={{ fontWeight: 800, fontSize: '15px', color: 'var(--color-dark)' }}>{od.name}</div>
+                  <div style={{ fontSize: '12.5px', color: 'var(--color-text-muted)', marginTop: '4px', lineHeight: 1.6 }}>
+                    📞 {od.phone}<br />
+                    {od.email && <>✉️ {od.email}<br /></>}
+                    📍 {od.address}<br />
                     {od.city}, Nepal
                   </div>
                 </div>
                 <div>
-                  <div style={{ fontSize: '10.5px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-text-muted)', marginBottom: '8px' }}>Payment</div>
+                  <div style={{ fontSize: '10.5px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-text-muted)', marginBottom: '6px' }}>Payment & Status</div>
                   <span style={{ fontSize: '12px', fontWeight: 700, background: '#082614', color: '#4ADE80', padding: '4px 12px', borderRadius: '20px', border: '1px solid #14592F', display: 'inline-block' }}>
                     {od.paymentMethod === 'cod' ? '💵 Cash on Delivery' : od.paymentMethod}
                   </span>
-                  <div style={{ marginTop: '10px', fontSize: '10.5px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-text-muted)', marginBottom: '4px' }}>Status</div>
+                  <div style={{ marginTop: '10px', fontSize: '10.5px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-text-muted)', marginBottom: '4px' }}>Order Status</div>
                   <span style={{ fontSize: '12px', fontWeight: 700, background: '#261E05', color: '#FDE047', padding: '4px 12px', borderRadius: '20px', border: '1px solid #634C08', display: 'inline-block' }}>⏳ Processing</span>
                 </div>
               </div>
 
-              {/* Items table */}
-              <div style={{ marginBottom: '18px' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: '10px', paddingBottom: '8px', borderBottom: '1.5px solid var(--color-border-light)', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--color-text-muted)' }}>Item</span>
-                  <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--color-text-muted)', textAlign: 'right' }}>Qty</span>
-                  <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--color-text-muted)', textAlign: 'right' }}>Amount</span>
+              {/* Items List with Thumbnails */}
+              <div style={{ marginBottom: '20px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: '10px', paddingBottom: '8px', borderBottom: '1.5px solid var(--color-border-light)', marginBottom: '10px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--color-text-muted)' }}>Item Details</span>
+                  <span style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--color-text-muted)', textAlign: 'center' }}>Qty</span>
+                  <span style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--color-text-muted)', textAlign: 'right' }}>Amount</span>
                 </div>
-                {od.items.map((item, i) => (
-                  <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: '10px', padding: '10px 0', borderBottom: '1px solid var(--color-border-light)', alignItems: 'center' }}>
-                    <div>
-                      <div style={{ fontWeight: 600, fontSize: '13.5px', color: 'var(--color-dark)' }}>{item.name}</div>
-                      {(item.variant?.size || item.variant?.color) && (
-                        <div style={{ fontSize: '11.5px', color: 'var(--color-text-muted)', marginTop: '2px' }}>
-                          {[item.variant?.size, item.variant?.color].filter(Boolean).join(' · ')}
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {od.items.map((item, i) => (
+                    <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: '12px', padding: '10px 0', borderBottom: '1px solid var(--color-border-light)', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <img
+                          src={item.images?.[0] || item.image || item.photo_url || '/logo.png'}
+                          alt={item.name}
+                          style={{ width: '42px', height: '42px', borderRadius: '8px', objectFit: 'cover', border: '1px solid var(--color-border-light)', flexShrink: 0 }}
+                          onError={(e) => { e.target.style.display = 'none'; }}
+                        />
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: '13.5px', color: 'var(--color-dark)' }}>{item.name}</div>
+                          {(item.variant?.size || item.variant?.color) && (
+                            <div style={{ fontSize: '11.5px', color: 'var(--color-text-muted)', marginTop: '2px' }}>
+                              {[item.variant?.size, item.variant?.color].filter(Boolean).join(' · ')}
+                            </div>
+                          )}
+                          <div style={{ fontSize: '11.5px', color: 'var(--color-text-muted)', marginTop: '1px' }}>NPR {item.price.toLocaleString()} each</div>
                         </div>
-                      )}
-                      <div style={{ fontSize: '11.5px', color: 'var(--color-text-muted)', marginTop: '1px' }}>NPR {item.price.toLocaleString()} each</div>
+                      </div>
+                      <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-dark)', textAlign: 'center', background: 'var(--color-surface)', padding: '2px 8px', borderRadius: '6px', border: '1px solid var(--color-border)' }}>
+                        ×{item.quantity}
+                      </div>
+                      <div style={{ fontSize: '13.5px', fontWeight: 800, color: 'var(--color-dark)', textAlign: 'right' }}>
+                        NPR {(item.price * item.quantity).toLocaleString()}
+                      </div>
                     </div>
-                    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-dark)', textAlign: 'right' }}>×{item.quantity}</div>
-                    <div style={{ fontSize: '13.5px', fontWeight: 700, color: 'var(--color-dark)', textAlign: 'right' }}>NPR {(item.price * item.quantity).toLocaleString()}</div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
 
-              {/* Totals */}
+              {/* Price Breakdown */}
               <div style={{ background: 'var(--color-surface)', borderRadius: '12px', padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: '8px', border: '1px solid var(--color-border-light)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--color-text-muted)' }}>
                   <span>Subtotal</span>
-                  <span style={{ fontWeight: 600, color: 'var(--color-dark)' }}>NPR {od.subtotal.toLocaleString()}</span>
+                  <span style={{ fontWeight: 700, color: 'var(--color-dark)' }}>NPR {od.subtotal.toLocaleString()}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--color-text-muted)' }}>
                   <span>Delivery Charge</span>
-                  <span style={{ fontWeight: 600, color: 'var(--color-dark)' }}>NPR {od.deliveryCharge}</span>
+                  <span style={{ fontWeight: 700, color: od.deliveryCharge === 0 ? '#16a34a' : 'var(--color-dark)' }}>
+                    {od.deliveryCharge === 0 ? 'FREE 🎉' : `NPR ${od.deliveryCharge}`}
+                  </span>
                 </div>
                 {od.discountAmount > 0 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#16a34a', fontWeight: 700 }}>
@@ -449,21 +504,21 @@ export default function Checkout() {
                     <span>− NPR {od.discountAmount.toLocaleString()}</span>
                   </div>
                 )}
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '17px', fontWeight: 800, color: 'var(--color-primary-navy)', paddingTop: '10px', borderTop: '1.5px solid var(--color-border)' }}>
-                  <span>Total</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '18px', fontWeight: 900, color: 'var(--color-primary-navy)', paddingTop: '10px', borderTop: '1.5px solid var(--color-border)' }}>
+                  <span>Grand Total</span>
                   <span>NPR {od.total.toLocaleString()}</span>
                 </div>
               </div>
 
-              {/* Footer note */}
+              {/* Footer Note */}
               <div style={{ textAlign: 'center', marginTop: '20px', fontSize: '12px', color: 'var(--color-text-muted)', lineHeight: 1.7 }}>
-                Your frames are lovingly crafted in Nepal 🇳🇵<br/>
-                For support, contact us via the website.
+                ❤️ Thank you for choosing <strong>EverFrame</strong>! Your frames are lovingly handcrafted in Nepal 🇳🇵<br/>
+                For support or inquiries: <strong>everframe.np@gmail.com</strong> · Track at <strong>/track-order</strong>
               </div>
             </div>
           </div>
 
-          {/* Action buttons */}
+          {/* Action Buttons */}
           <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
             <Link to="/" className="btn btn-outline" style={{ flex: 1, textAlign: 'center' }}>← Back to Home</Link>
             <Link to="/track-order" className="btn btn-outline" style={{ flex: 1, textAlign: 'center' }}>📦 Track Order</Link>
