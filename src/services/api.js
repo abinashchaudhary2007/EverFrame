@@ -22,51 +22,76 @@ export async function getProducts() {
   }
 }
 
-// Create new Order in Supabase
+// Create new Order in Supabase with localStorage fallback
 export async function createOrder(orderPayload) {
+  const fallbackNumber = `EF${Date.now().toString().slice(-6)}`;
+  const custName = orderPayload.customer_name || orderPayload.name || 'Valued Customer';
+  const custPhone = orderPayload.customer_phone || orderPayload.phone || '';
+  const custEmail = orderPayload.customer_email || orderPayload.email || '';
+  const city = orderPayload.city || 'Kathmandu';
+  const province = orderPayload.province || 'Bagmati';
+  const address = orderPayload.address || '';
+  const paymentMethod = orderPayload.payment_method || orderPayload.paymentMethod || 'COD';
+  const subtotal = orderPayload.subtotal || 0;
+  const deliveryCharge = orderPayload.delivery_charge ?? orderPayload.deliveryCharge ?? 100;
+  const discountAmount = orderPayload.discount_amount ?? orderPayload.discountAmount ?? 0;
+  const couponCode = orderPayload.coupon_code || orderPayload.couponCode || null;
+  const total = orderPayload.total || (subtotal + deliveryCharge - discountAmount);
+
+  const localFallbackOrder = {
+    id: fallbackNumber,
+    order_number: fallbackNumber,
+    customer_name: custName,
+    customer_email: custEmail,
+    customer_phone: custPhone,
+    province,
+    city,
+    address,
+    payment_method: paymentMethod,
+    subtotal,
+    delivery_charge: deliveryCharge,
+    discount_amount: discountAmount,
+    coupon_code: couponCode,
+    total,
+    order_status: 'Order Placed',
+    created_at: new Date().toISOString(),
+    items: orderPayload.items || [],
+    order_items: orderPayload.items || [],
+  };
+
   if (!isSupabaseConfigured || !supabase) {
-    // Save to localStorage fallback for user-specific history if Supabase offline
-    const localOrder = {
-      id: `EF${Date.now().toString().slice(-6)}`,
-      order_number: `EF${Date.now().toString().slice(-6)}`,
-      customer_name: orderPayload.name,
-      customer_email: orderPayload.email,
-      customer_phone: orderPayload.phone,
-      total: orderPayload.total,
-      order_status: 'Order Placed',
-      created_at: new Date().toISOString(),
-      items: orderPayload.items || [],
-    };
     try {
       const savedOrders = JSON.parse(localStorage.getItem('everframe_orders') || '[]');
-      localStorage.setItem('everframe_orders', JSON.stringify([localOrder, ...savedOrders]));
+      localStorage.setItem('everframe_orders', JSON.stringify([localFallbackOrder, ...savedOrders]));
     } catch (e) {
       console.error(e);
     }
     return {
       success: true,
-      orderNumber: localOrder.order_number,
+      data: localFallbackOrder,
+      order: localFallbackOrder,
+      orderNumber: fallbackNumber,
       source: 'local',
     };
   }
 
   try {
-    const orderNumber = `EF${Date.now().toString().slice(-6)}`;
+    const orderNumber = fallbackNumber;
     const { data: orderData, error: orderErr } = await supabase
       .from('orders')
       .insert([
         {
           order_number: orderNumber,
-          customer_name: orderPayload.name,
-          customer_email: orderPayload.email,
-          customer_phone: orderPayload.phone,
-          province: orderPayload.province,
-          city: orderPayload.city,
-          address: orderPayload.address,
-          payment_method: orderPayload.paymentMethod,
-          subtotal: orderPayload.subtotal,
-          delivery_charge: orderPayload.deliveryCharge,
-          total: orderPayload.total,
+          customer_name: custName,
+          customer_email: custEmail || null,
+          customer_phone: custPhone,
+          province,
+          city,
+          address,
+          payment_method: paymentMethod,
+          subtotal,
+          delivery_charge: deliveryCharge,
+          total,
         },
       ])
       .select()
@@ -78,15 +103,21 @@ export async function createOrder(orderPayload) {
     if (orderPayload.items && orderPayload.items.length > 0) {
       const itemsPayload = orderPayload.items.map(item => ({
         order_id: orderData.id,
-        product_id: typeof item.id === 'number' ? item.id : null,
-        product_name: item.name,
+        product_id: typeof item.id === 'number' || typeof item.product_id === 'number' ? (item.id || item.product_id) : null,
+        product_name: item.name || item.product_name,
         price: item.price,
         quantity: item.quantity,
-        options: item.options || {},
+        options: item.options || item.variant || {},
       }));
 
       await supabase.from('order_items').insert(itemsPayload);
     }
+
+    // Save to local cache as well for instant resilience
+    try {
+      const savedOrders = JSON.parse(localStorage.getItem('everframe_orders') || '[]');
+      localStorage.setItem('everframe_orders', JSON.stringify([orderData, ...savedOrders]));
+    } catch {}
 
     // Dispatch global events for instant live sync across user & admin pages
     if (typeof window !== 'undefined') {
@@ -94,19 +125,31 @@ export async function createOrder(orderPayload) {
       window.dispatchEvent(new CustomEvent('everframe_new_order', { detail: { orderNumber, orderData } }));
     }
 
-    return { success: true, orderNumber, order: orderData, source: 'supabase' };
+    return {
+      success: true,
+      data: orderData,
+      order: orderData,
+      orderNumber,
+      source: 'supabase',
+    };
   } catch (err) {
-    console.error('Supabase Order Error:', err);
+    console.error('Supabase Order Error, using local fallback:', err);
     
+    try {
+      const savedOrders = JSON.parse(localStorage.getItem('everframe_orders') || '[]');
+      localStorage.setItem('everframe_orders', JSON.stringify([localFallbackOrder, ...savedOrders]));
+    } catch {}
+
     if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('everframe_order_updated'));
-      window.dispatchEvent(new CustomEvent('everframe_new_order'));
+      window.dispatchEvent(new CustomEvent('everframe_order_updated', { detail: { orderNumber: fallbackNumber, orderData: localFallbackOrder } }));
+      window.dispatchEvent(new CustomEvent('everframe_new_order', { detail: { orderNumber: fallbackNumber, orderData: localFallbackOrder } }));
     }
 
     return {
       success: true,
-      orderNumber: localOrder.order_number,
-      order: localOrder,
+      data: localFallbackOrder,
+      order: localFallbackOrder,
+      orderNumber: fallbackNumber,
       source: 'local',
     };
   }

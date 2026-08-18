@@ -222,8 +222,8 @@ export default function Checkout() {
       };
 
       const res = await createOrder(orderPayload);
-      if (res?.data) {
-        const orderNum = res.data.order_number || res.data.id;
+      if (res?.data || res?.order || res?.orderNumber || res?.success) {
+        const orderNum = res.orderNumber || res.data?.order_number || res.order?.order_number || res.data?.id || `EF${Date.now().toString().slice(-6)}`;
         setPlacedOrderNum(orderNum);
         setPlacedOrderDetails({
           orderNumber: orderNum,
@@ -254,6 +254,7 @@ export default function Checkout() {
         throw new Error(res?.error || 'Failed to place order');
       }
     } catch (err) {
+      console.error(err);
       toast.error(err.message || 'Failed to place order. Please try again.');
     } finally {
       setLoading(false);
