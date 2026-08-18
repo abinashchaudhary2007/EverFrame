@@ -135,7 +135,8 @@ export default function Checkout() {
     }
   }, [placed]);
 
-  const DELIVERY_CHARGE = 100;
+  const DELIVERY_THRESHOLD = 2000;
+  const DELIVERY_CHARGE = subtotal >= DELIVERY_THRESHOLD ? 0 : 100;
   const discountAmount = appliedCoupon ? appliedCoupon.discount : 0;
   const total = Math.max(0, subtotal + DELIVERY_CHARGE - discountAmount);
 
@@ -584,12 +585,21 @@ export default function Checkout() {
                 </div>
 
                 {/* Delivery charge banner */}
-                <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '10px', padding: '10px 14px' }}>
-                  <Truck size={15} color="#16a34a" />
-                  <span style={{ fontSize: '12.5px', color: '#16a34a', fontWeight: 600 }}>
-                    {DELIVERY_CHARGE === 0
-                      ? '🎉 Free delivery on this order!'
-                      : `Delivery charge: NPR ${DELIVERY_CHARGE} · Free on orders above NPR 2,000`}
+                <div style={{
+                  marginTop: '10px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  background: subtotal >= DELIVERY_THRESHOLD ? '#082614' : 'var(--color-surface)',
+                  border: `1px solid ${subtotal >= DELIVERY_THRESHOLD ? '#14592F' : 'var(--color-border)'}`,
+                  borderRadius: '10px',
+                  padding: '10px 14px',
+                }}>
+                  <Truck size={15} color={subtotal >= DELIVERY_THRESHOLD ? '#4ADE80' : 'var(--color-primary-navy)'} />
+                  <span style={{ fontSize: '12.5px', color: subtotal >= DELIVERY_THRESHOLD ? '#4ADE80' : 'var(--color-dark)', fontWeight: 600 }}>
+                    {subtotal >= DELIVERY_THRESHOLD
+                      ? '🎉 Free delivery unlocked! (Orders above NPR 2,000)'
+                      : `Delivery charge: NPR ${DELIVERY_CHARGE} · Add NPR ${(DELIVERY_THRESHOLD - subtotal).toLocaleString()} more for free delivery`}
                   </span>
                 </div>
               </div>

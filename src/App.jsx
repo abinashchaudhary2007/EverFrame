@@ -7,6 +7,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import AnnouncementBar from './components/layout/AnnouncementBar';
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
+import FloatingCartBar from './components/cart/FloatingCartBar';
 import Home from './pages/Home';
 import Shop from './pages/Shop';
 import ProductDetail from './pages/ProductDetail';
@@ -59,6 +60,7 @@ function App() {
               </Routes>
             </main>
             <Footer />
+            <FloatingCartBar />
             <Toaster
               position="bottom-right"
               toastOptions={{ duration: 3000 }}

@@ -6,7 +6,7 @@ export default function Cart() {
   const { cartItems, removeFromCart, updateQuantity, subtotal, clearCart } = useCart();
 
   const DELIVERY_THRESHOLD = 2000;
-  const DELIVERY_CHARGE = subtotal >= DELIVERY_THRESHOLD ? 0 : 150;
+  const DELIVERY_CHARGE = subtotal >= DELIVERY_THRESHOLD ? 0 : 100;
   const total = subtotal + DELIVERY_CHARGE;
 
   if (cartItems.length === 0) {

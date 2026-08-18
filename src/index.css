@@ -3807,6 +3807,32 @@ ul, ol {
   border-color: transparent !important;
 }
 
+/* Floating Cart Bar Animation & Responsive Styles */
+@keyframes slideUpBounce {
+  0% {
+    opacity: 0;
+    transform: translateY(30px) scale(0.9);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(-6px) scale(1.03);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 640px) {
+  .floating-cart-bar {
+    bottom: 16px !important;
+    right: 16px !important;
+    left: 16px !important;
+    justify-content: space-between !important;
+    padding: 10px 14px !important;
+  }
+}
+
 
 
 
