@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { CheckCircle, Tag, X, MapPin, ShieldCheck, Package, Truck, AlertCircle } from 'lucide-react';
+import { CheckCircle, Tag, X, MapPin, ShieldCheck, Package, Truck, AlertCircle, Sparkles, ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
+import confetti from 'canvas-confetti';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import CopyButton from '../components/ui/CopyButton';
@@ -14,6 +15,82 @@ const PAYMENT_METHODS = [
 ];
 
 const VALLEY_CITIES = ['Kathmandu', 'Lalitpur', 'Bhaktapur', 'Kirtipur', 'Budhanilkantha', 'Tokha', 'Gokarneshwor', 'Kageshwori', 'Chandragiri', 'Nagarjun'];
+
+// Trigger multi-stage celebratory confetti explosion
+function triggerCelebration() {
+  const count = 200;
+  const defaults = {
+    origin: { y: 0.65 },
+    zIndex: 99999,
+  };
+
+  function fire(particleRatio, opts) {
+    confetti({
+      ...defaults,
+      ...opts,
+      particleCount: Math.floor(count * particleRatio),
+    });
+  }
+
+  // Initial rich center burst
+  fire(0.25, {
+    spread: 30,
+    startVelocity: 55,
+    colors: ['#216DB2', '#3D3A86', '#F472B6', '#FCD34D', '#10B981'],
+  });
+  fire(0.2, {
+    spread: 60,
+    colors: ['#60A5FA', '#C084FC', '#F472B6', '#FDE047'],
+  });
+  fire(0.35, {
+    spread: 100,
+    decay: 0.91,
+    scalar: 0.8,
+    colors: ['#3B82F6', '#6366F1', '#EC4899', '#34D399'],
+  });
+  fire(0.1, {
+    spread: 120,
+    startVelocity: 25,
+    decay: 0.92,
+    scalar: 1.2,
+    colors: ['#F59E0B', '#EF4444', '#8B5CF6', '#10B981'],
+  });
+  fire(0.1, {
+    spread: 120,
+    startVelocity: 45,
+    colors: ['#216DB2', '#3D3A86', '#F472B6'],
+  });
+
+  // Left & Right celebratory side cannons
+  setTimeout(() => {
+    confetti({
+      particleCount: 50,
+      angle: 60,
+      spread: 60,
+      origin: { x: 0, y: 0.7 },
+      zIndex: 99999,
+      colors: ['#216DB2', '#F472B6', '#FCD34D', '#4ADE80'],
+    });
+    confetti({
+      particleCount: 50,
+      angle: 120,
+      spread: 60,
+      origin: { x: 1, y: 0.7 },
+      zIndex: 99999,
+      colors: ['#3D3A86', '#60A5FA', '#F472B6', '#FCD34D'],
+    });
+  }, 350);
+
+  setTimeout(() => {
+    confetti({
+      particleCount: 65,
+      spread: 100,
+      origin: { y: 0.55 },
+      zIndex: 99999,
+      colors: ['#3B82F6', '#8B5CF6', '#EC4899', '#10B981'],
+    });
+  }, 750);
+}
 
 export default function Checkout() {
   const { cartItems, subtotal, clearCart } = useCart();
@@ -51,6 +128,13 @@ export default function Checkout() {
     }
   }, [authUser]);
 
+  // Trigger celebration animation on successful order placement
+  useEffect(() => {
+    if (placed) {
+      triggerCelebration();
+    }
+  }, [placed]);
+
   const DELIVERY_CHARGE = 100;
   const discountAmount = appliedCoupon ? appliedCoupon.discount : 0;
   const total = Math.max(0, subtotal + DELIVERY_CHARGE - discountAmount);
@@ -65,8 +149,8 @@ export default function Checkout() {
       setAppliedCoupon({
         code: couponInput.trim().toUpperCase(),
         discount: result.discount,
-        discount_type: result.coupon.discount_type,
-        discount_value: result.coupon.discount_value,
+        discount_type: result.coupon?.discount_type,
+        discount_value: result.coupon?.discount_value,
       });
       toast.success(`Coupon applied! You save NPR ${result.discount.toLocaleString()} 🎉`, {
         position: 'bottom-right',
@@ -90,7 +174,6 @@ export default function Checkout() {
     if (!form.phone.trim() || !/^9\d{9}$/.test(form.phone)) errs.phone = 'Enter a valid 10-digit number starting with 9';
     if (!form.city.trim()) errs.city = 'Required';
     if (!form.address.trim()) errs.address = 'Required';
-    // Warn if city seems outside valley (soft check only)
     return errs;
   };
 
@@ -102,91 +185,99 @@ export default function Checkout() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (cartItems.length === 0) {
+      toast.error('Your cart is empty');
+      navigate('/shop');
+      return;
+    }
     const errs = validate();
     if (Object.keys(errs).length > 0) {
       setErrors(errs);
-      toast.error('Please fill all required fields', { position: 'top-center' });
+      toast.error('Please fill in all required fields correctly');
       return;
     }
-    if (paymentMethod !== 'cod') {
-      toast('⚠️ Online payment coming soon! Please use Cash on Delivery.', {
-        duration: 4000,
-        position: 'top-center',
-        style: { background: '#172A72', color: '#fff', borderRadius: '8px', fontSize: '13.5px' },
-      });
-      return;
-    }
+
     setLoading(true);
-    const res = await createOrder({
-      name: form.name,
-      email: form.email || `${form.phone}@everframe.np`,
-      phone: form.phone,
-      province: 'Bagmati',
-      city: form.city,
-      address: form.address,
-      paymentMethod,
-      subtotal,
-      deliveryCharge: DELIVERY_CHARGE,
-      discountAmount,
-      couponCode: appliedCoupon?.code || null,
-      total,
-      items: cartItems,
-    });
-    if (appliedCoupon?.code) {
-      await incrementCouponUsage(appliedCoupon.code);
+    try {
+      const orderPayload = {
+        customer_name: form.name.trim(),
+        customer_phone: form.phone.trim(),
+        customer_email: form.email.trim() || null,
+        city: form.city.trim(),
+        address: form.address.trim(),
+        payment_method: paymentMethod,
+        subtotal,
+        delivery_charge: DELIVERY_CHARGE,
+        discount_amount: discountAmount,
+        coupon_code: appliedCoupon ? appliedCoupon.code : null,
+        total,
+        items: cartItems.map(item => ({
+          product_id: item.id || null,
+          product_name: item.name,
+          variant: item.variant || null,
+          quantity: item.quantity,
+          price: item.price,
+          photo_url: item.options?.photo || null,
+        })),
+      };
+
+      const res = await createOrder(orderPayload);
+      if (res?.data) {
+        const orderNum = res.data.order_number || res.data.id;
+        setPlacedOrderNum(orderNum);
+        setPlacedOrderDetails({
+          orderNumber: orderNum,
+          name: form.name,
+          phone: form.phone,
+          email: form.email,
+          city: form.city,
+          address: form.address,
+          paymentMethod,
+          subtotal,
+          deliveryCharge: DELIVERY_CHARGE,
+          discountAmount,
+          couponCode: appliedCoupon?.code,
+          total,
+          items: cartItems,
+          placedAt: new Date(),
+        });
+        if (appliedCoupon) {
+          try { await incrementCouponUsage(appliedCoupon.code); } catch {}
+        }
+        clearCart();
+        setPlaced(true);
+        toast.success('Order placed successfully! 🎉', {
+          position: 'bottom-right',
+          style: { background: '#172A72', color: '#fff', borderRadius: '8px', fontSize: '13.5px' },
+        });
+      } else {
+        throw new Error(res?.error || 'Failed to place order');
+      }
+    } catch (err) {
+      toast.error(err.message || 'Failed to place order. Please try again.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-    setPlacedOrderNum(res.orderNumber);
-    // Snapshot full order for the bill before clearing cart
-    setPlacedOrderDetails({
-      orderNumber: res.orderNumber,
-      name: form.name,
-      phone: form.phone,
-      email: form.email,
-      city: form.city,
-      address: form.address,
-      paymentMethod,
-      items: cartItems.map(i => ({ ...i })),
-      subtotal,
-      deliveryCharge: DELIVERY_CHARGE,
-      discountAmount,
-      couponCode: appliedCoupon?.code || null,
-      total,
-      placedAt: new Date(),
-    });
-    setPlaced(true);
-    clearCart();
   };
 
-  // ── Empty cart ──
-  if (cartItems.length === 0 && !placed) {
-    return (
-      <div className="empty-state" style={{ minHeight: '60vh' }}>
-        <div className="empty-state-icon">🛒</div>
-        <h3>Your cart is empty</h3>
-        <p>Add some frames before checking out.</p>
-        <Link to="/shop" className="btn btn-primary" style={{ marginTop: '16px' }}>Shop Now</Link>
-      </div>
-    );
-  }
-
-  // ── Order success with printable bill ──
+  // SUCCESS / BILL VIEW
   if (placed && placedOrderDetails) {
     const od = placedOrderDetails;
+
     const handlePrint = () => {
-      const printContent = document.getElementById('everframe-bill');
-      const win = window.open('', '_blank', 'width=700,height=900');
+      const win = window.open('', '_blank');
       win.document.write(`
-        <html><head><title>EverFrame Invoice #${od.orderNumber}</title><style>
-          * { margin:0; padding:0; box-sizing:border-box; }
-          body { font-family: 'Segoe UI', Arial, sans-serif; color: #1a1a1a; padding: 32px; background: #fff; }
-          .logo { font-size:22px; font-weight:900; color:#172A72; letter-spacing:-0.5px; margin-bottom:4px; }
-          .tagline { font-size:11px; color:#6b7280; margin-bottom:24px; }
-          .header-row { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:28px; }
-          .invoice-title { font-size:28px; font-weight:900; color:#172A72; }
-          .invoice-meta { font-size:12px; color:#6b7280; text-align:right; line-height:1.8; }
-          .divider { border:none; border-top:2px solid #e5e7eb; margin:20px 0; }
-          .section-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:#9ca3af; margin-bottom:10px; }
+        <!DOCTYPE html>
+        <html><head><title>EverFrame Invoice #${od.orderNumber}</title>
+        <style>
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 36px; max-width: 620px; margin: 0 auto; color: #111; }
+          .header-row { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px; }
+          .logo { font-size:24px; font-weight:900; color:#172A72; letter-spacing:-0.5px; }
+          .tagline { font-size:11.5px; color:#6b7280; margin-top:2px; }
+          .invoice-title { font-size:13px; font-weight:800; text-transform:uppercase; letter-spacing:0.08em; color:#172A72; text-align:right; }
+          .invoice-meta { font-size:12px; color:#6b7280; margin-top:3px; text-align:right; line-height:1.6; }
+          .divider { border:none; border-top:1.5px solid #e5e7eb; margin:20px 0; }
+          .section-title { font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.08em; color:#172A72; margin-bottom:6px; }
           .info-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:28px; }
           .info-label { font-size:11px; color:#9ca3af; margin-bottom:2px; }
           .info-value { font-size:13.5px; font-weight:600; color:#111; }
@@ -252,19 +343,30 @@ export default function Checkout() {
       <div style={{ background: 'var(--color-bg)', minHeight: '100vh', padding: '40px 20px' }}>
         <div style={{ maxWidth: '620px', margin: '0 auto' }}>
 
-          {/* Success header */}
+          {/* Celebration Success Header */}
           <div style={{ textAlign: 'center', marginBottom: '28px' }}>
-            <div style={{ width: '68px', height: '68px', borderRadius: '50%', background: 'linear-gradient(135deg,#16a34a,#22c55e)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-              <CheckCircle size={36} color="#fff" />
+            <div style={{
+              width: '76px', height: '76px', borderRadius: '50%',
+              background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 16px',
+              boxShadow: '0 10px 25px rgba(16, 185, 129, 0.35)',
+            }}>
+              <CheckCircle size={40} color="#fff" />
             </div>
-            <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '26px', fontWeight: 800, color: 'var(--color-primary-navy)' }}>Order Confirmed! 🎉</h1>
-            <p style={{ color: 'var(--color-text-muted)', fontSize: '14px', marginTop: '8px' }}>
+            
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'var(--brand-gradient-soft)', padding: '6px 16px', borderRadius: '20px', fontSize: '13px', fontWeight: 700, color: 'var(--color-primary-navy)', marginBottom: '10px' }}>
+              <Sparkles size={15} color="var(--color-pink)" /> Celebration Time! Your Order is Placed 🎉
+            </div>
+
+            <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '28px', fontWeight: 800, color: 'var(--color-primary-navy)', margin: '4px 0 8px' }}>Order Confirmed!</h1>
+            <p style={{ color: 'var(--color-text-muted)', fontSize: '14px', margin: 0 }}>
               Thank you, <strong>{od.name}</strong>! Your EverFrame is being crafted for delivery to <strong>{od.city}</strong>.
             </p>
           </div>
 
           {/* Bill / Invoice Card */}
-          <div id="everframe-bill" style={{ background: '#fff', borderRadius: '16px', border: '1px solid var(--color-border-light)', boxShadow: '0 4px 24px rgba(0,0,0,0.07)', overflow: 'hidden' }}>
+          <div id="everframe-bill" style={{ background: 'var(--color-white)', borderRadius: '16px', border: '1px solid var(--color-border-light)', boxShadow: 'var(--shadow-card)', overflow: 'hidden' }}>
 
             {/* Bill header */}
             <div style={{ background: 'var(--brand-gradient)', padding: '22px 28px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -297,11 +399,11 @@ export default function Checkout() {
                 </div>
                 <div>
                   <div style={{ fontSize: '10.5px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-text-muted)', marginBottom: '8px' }}>Payment</div>
-                  <span style={{ fontSize: '12px', fontWeight: 700, background: '#dcfce7', color: '#16a34a', padding: '4px 12px', borderRadius: '20px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 700, background: '#082614', color: '#4ADE80', padding: '4px 12px', borderRadius: '20px', border: '1px solid #14592F', display: 'inline-block' }}>
                     {od.paymentMethod === 'cod' ? '💵 Cash on Delivery' : od.paymentMethod}
                   </span>
                   <div style={{ marginTop: '10px', fontSize: '10.5px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-text-muted)', marginBottom: '4px' }}>Status</div>
-                  <span style={{ fontSize: '12px', fontWeight: 700, background: '#fef9c3', color: '#854d0e', padding: '4px 12px', borderRadius: '20px' }}>⏳ Processing</span>
+                  <span style={{ fontSize: '12px', fontWeight: 700, background: '#261E05', color: '#FDE047', padding: '4px 12px', borderRadius: '20px', border: '1px solid #634C08', display: 'inline-block' }}>⏳ Processing</span>
                 </div>
               </div>
 
@@ -313,7 +415,7 @@ export default function Checkout() {
                   <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--color-text-muted)', textAlign: 'right' }}>Amount</span>
                 </div>
                 {od.items.map((item, i) => (
-                  <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: '10px', padding: '10px 0', borderBottom: '1px solid #f9fafb', alignItems: 'center' }}>
+                  <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: '10px', padding: '10px 0', borderBottom: '1px solid var(--color-border-light)', alignItems: 'center' }}>
                     <div>
                       <div style={{ fontWeight: 600, fontSize: '13.5px', color: 'var(--color-dark)' }}>{item.name}</div>
                       {(item.variant?.size || item.variant?.color) && (
@@ -330,7 +432,7 @@ export default function Checkout() {
               </div>
 
               {/* Totals */}
-              <div style={{ background: 'var(--color-surface)', borderRadius: '12px', padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ background: 'var(--color-surface)', borderRadius: '12px', padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: '8px', border: '1px solid var(--color-border-light)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--color-text-muted)' }}>
                   <span>Subtotal</span>
                   <span style={{ fontWeight: 600, color: 'var(--color-dark)' }}>NPR {od.subtotal.toLocaleString()}</span>
@@ -361,8 +463,8 @@ export default function Checkout() {
 
           {/* Action buttons */}
           <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
-            <Link to="/" className="btn btn-outline" style={{ flex: 1 }}>← Back to Home</Link>
-            <Link to="/track-order" className="btn btn-outline" style={{ flex: 1 }}>📦 Track Order</Link>
+            <Link to="/" className="btn btn-outline" style={{ flex: 1, textAlign: 'center' }}>← Back to Home</Link>
+            <Link to="/track-order" className="btn btn-outline" style={{ flex: 1, textAlign: 'center' }}>📦 Track Order</Link>
             <button
               className="btn btn-primary"
               onClick={handlePrint}
@@ -384,8 +486,9 @@ export default function Checkout() {
     fontSize: '14px',
     fontFamily: 'var(--font-sans)',
     outline: 'none',
-    background: '#fff',
-    transition: 'border-color 0.2s',
+    background: 'var(--color-surface)',
+    color: 'var(--color-dark)',
+    transition: 'all 0.2s',
     boxSizing: 'border-box',
   });
 
@@ -411,7 +514,7 @@ export default function Checkout() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
 
               {/* Delivery Card */}
-              <div style={{ background: '#fff', borderRadius: '16px', padding: '26px', border: '1px solid var(--color-border-light)', boxShadow: '0 2px 10px rgba(0,0,0,0.04)' }}>
+              <div style={{ background: 'var(--color-white)', borderRadius: '16px', padding: '26px', border: '1px solid var(--color-border-light)', boxShadow: 'var(--shadow-card)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
                   <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--brand-gradient)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <MapPin size={15} color="#fff" />
@@ -461,7 +564,6 @@ export default function Checkout() {
                   {errors.address && <span style={{ color: '#e53e3e', fontSize: '11.5px', marginTop: '3px', display: 'block' }}>{errors.address}</span>}
                 </div>
 
-                {/* Email (optional) */}
                 <div>
                   <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: '5px' }}>
                     Email <span style={{ fontWeight: 400 }}>(optional)</span>
@@ -470,20 +572,20 @@ export default function Checkout() {
                 </div>
 
                 {/* Delivery zone notice */}
-                <div style={{ marginTop: '14px', display: 'flex', alignItems: 'flex-start', gap: '10px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px', padding: '12px 14px' }}>
-                  <AlertCircle size={16} color="#d97706" style={{ flexShrink: 0, marginTop: '1px' }} />
+                <div style={{ marginTop: '14px', display: 'flex', alignItems: 'flex-start', gap: '10px', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '10px', padding: '12px 14px' }}>
+                  <AlertCircle size={16} color="#f59e0b" style={{ flexShrink: 0, marginTop: '1px' }} />
                   <div>
-                    <div style={{ fontSize: '12.5px', fontWeight: 700, color: '#92400e', marginBottom: '2px' }}>📍 Kathmandu Valley Delivery Only</div>
-                    <div style={{ fontSize: '12px', color: '#b45309', lineHeight: 1.5 }}>
+                    <div style={{ fontSize: '12.5px', fontWeight: 700, color: '#f59e0b', marginBottom: '2px' }}>📍 Kathmandu Valley Delivery Only</div>
+                    <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', lineHeight: 1.5 }}>
                       We currently deliver within <strong>Kathmandu, Lalitpur, and Bhaktapur</strong> districts only. Nationwide delivery coming soon!
                     </div>
                   </div>
                 </div>
 
                 {/* Delivery charge banner */}
-                <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '8px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '10px', padding: '10px 14px' }}>
+                <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '10px', padding: '10px 14px' }}>
                   <Truck size={15} color="#16a34a" />
-                  <span style={{ fontSize: '12.5px', color: '#15803d', fontWeight: 600 }}>
+                  <span style={{ fontSize: '12.5px', color: '#16a34a', fontWeight: 600 }}>
                     {DELIVERY_CHARGE === 0
                       ? '🎉 Free delivery on this order!'
                       : `Delivery charge: NPR ${DELIVERY_CHARGE} · Free on orders above NPR 2,000`}
@@ -492,7 +594,7 @@ export default function Checkout() {
               </div>
 
               {/* Payment Card */}
-              <div style={{ background: '#fff', borderRadius: '16px', padding: '26px', border: '1px solid var(--color-border-light)', boxShadow: '0 2px 10px rgba(0,0,0,0.04)' }}>
+              <div style={{ background: 'var(--color-white)', borderRadius: '16px', padding: '26px', border: '1px solid var(--color-border-light)', boxShadow: 'var(--shadow-card)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
                   <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--brand-gradient)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <ShieldCheck size={15} color="#fff" />
@@ -512,7 +614,7 @@ export default function Checkout() {
                         padding: '14px 16px',
                         borderRadius: '12px',
                         border: `1.5px solid ${paymentMethod === pm.id ? 'var(--color-blue)' : 'var(--color-border)'}`,
-                        background: paymentMethod === pm.id ? '#f0f4ff' : pm.disabled ? '#fafafa' : '#fff',
+                        background: paymentMethod === pm.id ? 'var(--brand-gradient-soft)' : 'var(--color-surface)',
                         cursor: pm.disabled ? 'not-allowed' : 'pointer',
                         opacity: pm.disabled ? 0.55 : 1,
                         transition: 'all 0.15s',
@@ -525,7 +627,7 @@ export default function Checkout() {
                         <div style={{ fontSize: '11.5px', color: 'var(--color-text-muted)', marginTop: '1px' }}>{pm.desc}</div>
                       </div>
                       {pm.recommended && (
-                        <span style={{ fontSize: '11px', fontWeight: 700, background: '#dcfce7', color: '#16a34a', padding: '3px 10px', borderRadius: '20px', flexShrink: 0 }}>Recommended</span>
+                        <span style={{ fontSize: '11px', fontWeight: 700, background: '#082614', color: '#4ADE80', border: '1px solid #14592F', padding: '3px 10px', borderRadius: '20px', flexShrink: 0 }}>Recommended</span>
                       )}
                     </label>
                   ))}
@@ -535,7 +637,7 @@ export default function Checkout() {
 
             {/* RIGHT: Summary */}
             <div style={{ position: 'sticky', top: '20px' }}>
-              <div style={{ background: '#fff', borderRadius: '16px', padding: '22px', border: '1px solid var(--color-border-light)', boxShadow: '0 4px 20px rgba(0,0,0,0.07)' }}>
+              <div style={{ background: 'var(--color-white)', borderRadius: '16px', padding: '22px', border: '1px solid var(--color-border-light)', boxShadow: 'var(--shadow-card)' }}>
                 {/* Summary header */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', paddingBottom: '14px', borderBottom: '1px solid var(--color-border-light)' }}>
                   <Package size={17} color="var(--color-primary-navy)" />
@@ -592,7 +694,7 @@ export default function Checkout() {
                               value={couponInput}
                               onChange={e => { setCouponInput(e.target.value.toUpperCase()); setCouponError(''); }}
                               onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleApplyCoupon())}
-                              style={{ flex: 1, padding: '8px 10px', border: '1.5px solid var(--color-border)', borderRadius: '8px', fontSize: '13px', fontFamily: 'monospace', fontWeight: 700, outline: 'none' }}
+                              style={{ flex: 1, padding: '8px 10px', border: '1.5px solid var(--color-border)', borderRadius: '8px', fontSize: '13px', fontFamily: 'monospace', fontWeight: 700, outline: 'none', background: 'var(--color-surface)', color: 'var(--color-dark)' }}
                             />
                             <button type="button" className="btn btn-primary" style={{ padding: '8px 12px', fontSize: '12.5px', flexShrink: 0 }} onClick={handleApplyCoupon} disabled={couponLoading}>
                               {couponLoading ? '...' : 'Apply'}
@@ -603,7 +705,7 @@ export default function Checkout() {
                       )}
                     </>
                   ) : (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f0fdf4', padding: '8px 12px', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--color-surface)', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <Tag size={13} color="#16a34a" />
                         <span style={{ fontSize: '13px', fontWeight: 800, color: '#16a34a', fontFamily: 'monospace' }}>{appliedCoupon.code}</span>
