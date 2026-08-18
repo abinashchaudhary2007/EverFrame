@@ -55,18 +55,18 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Newsletter */}
+            {/* Newsletter */}
           <div>
             <div className="footer-col-title">Stay Updated</div>
-            <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.45)', marginBottom: '16px', lineHeight: '1.65' }}>
+            <p style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.72)', marginBottom: '16px', lineHeight: '1.65' }}>
               Get exclusive deals, new arrivals and inspiration straight to your inbox.
             </p>
             <div className="footer-newsletter">
               <input type="email" placeholder="Your email address" />
               <button className="btn btn-primary btn-sm btn-full">Subscribe</button>
             </div>
-            <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginTop: '10px' }}>
-              📍 Kathmandu, Nepal &nbsp;·&nbsp; 📞 <a href="tel:+9779805185431" style={{ color: 'inherit', textDecoration: 'underline' }}>+977-9805185431</a>
+            <p style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.8)', marginTop: '12px' }}>
+              📍 Kathmandu, Nepal &nbsp;·&nbsp; 📞 <a href="tel:+9779805185431" style={{ color: '#93C5FD', fontWeight: 600, textDecoration: 'none' }}>+977-9805185431</a>
             </p>
           </div>
         </div>

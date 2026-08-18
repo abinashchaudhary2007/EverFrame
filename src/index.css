@@ -3693,8 +3693,118 @@ ul, ol {
   border-radius: 10px;
 }
 
-[data-theme="dark"] .account-content [style*="overflowY"]::-webkit-scrollbar-thumb {
-  background: #2A3655;
+/* =====================================================
+   COMPREHENSIVE DARK MODE CONTRAST & UI ENHANCEMENTS
+   ===================================================== */
+
+/* ── Checkout Page Dark Mode ── */
+[data-theme="dark"] [style*="background: '#fff'"],
+[data-theme="dark"] [style*="background: #fff"],
+[data-theme="dark"] [style*="backgroundColor: '#fff'"] {
+  background-color: #13192B !important;
+  border-color: #263352 !important;
+  color: #F8FAFC !important;
+}
+
+/* Delivery notice / warning boxes (Kathmandu Valley only) */
+[data-theme="dark"] [style*="#fffbeb"],
+[data-theme="dark"] [style*="#FFFBEB"] {
+  background-color: #261908 !important;
+  border-color: #633C08 !important;
+}
+[data-theme="dark"] [style*="#92400e"],
+[data-theme="dark"] [style*="#92400E"],
+[data-theme="dark"] [style*="#b45309"],
+[data-theme="dark"] [style*="#B45309"] {
+  color: #FCD34D !important;
+}
+
+/* Free delivery banners in checkout and cart */
+[data-theme="dark"] [style*="#f0fdf4"],
+[data-theme="dark"] [style*="#F0FDF4"],
+[data-theme="dark"] [style*="#eef9ee"] {
+  background-color: #082614 !important;
+  border-color: #14592F !important;
+}
+[data-theme="dark"] [style*="#15803d"],
+[data-theme="dark"] [style*="#16a34a"] {
+  color: #4ADE80 !important;
+}
+
+/* Processing & Recommended badges */
+[data-theme="dark"] [style*="#fef9c3"] {
+  background-color: #261E05 !important;
+  border-color: #634C08 !important;
+  color: #FDE047 !important;
+}
+[data-theme="dark"] [style*="#dcfce7"] {
+  background-color: #082614 !important;
+  color: #4ADE80 !important;
+}
+
+/* Error message boxes (e.g. tracking not found, form errors) */
+[data-theme="dark"] [style*="#FFF1F2"],
+[data-theme="dark"] [style*="#fff1f2"] {
+  background-color: #2A0A12 !important;
+  border-color: #7F1D33 !important;
+  color: #FCA5A5 !important;
+}
+
+/* Payment method radio cards in Checkout */
+[data-theme="dark"] label[style*="cursor: 'pointer'"],
+[data-theme="dark"] label[style*="cursor: pointer"] {
+  background-color: #13192B !important;
+  border-color: #263352 !important;
+  color: #F8FAFC !important;
+}
+[data-theme="dark"] label[style*="#f0f4ff"],
+[data-theme="dark"] label[style*="#F0F4FF"] {
+  background-color: #1A284D !important;
+  border-color: #3B82F6 !important;
+}
+
+/* ── Product Detail Reviews & Tabs Dark Mode ── */
+[data-theme="dark"] .product-review-card,
+[data-theme="dark"] [style*="borderRadius: '14px'"][style*="padding: '22px'"] {
+  background-color: #13192B !important;
+  border-color: #263352 !important;
+}
+[data-theme="dark"] .product-review-card p,
+[data-theme="dark"] [style*="whiteSpace: 'pre-wrap'"] {
+  color: #E2E8F0 !important;
+}
+
+/* ── Order Tracking Items in Dark Mode ── */
+[data-theme="dark"] .tracking-card [style*="background: 'var(--color-white)'"],
+[data-theme="dark"] .tracking-card [style*="background: var(--color-white)"] {
+  background-color: #1A233A !important;
+  border-color: #2A3655 !important;
+  color: #F8FAFC !important;
+}
+[data-theme="dark"] .tracking-card [style*="color: 'var(--color-dark)'"] {
+  color: #F1F5F9 !important;
+}
+
+/* ── Custom Frame Builder Sidebar & Summary ── */
+[data-theme="dark"] .custom-frame-sidebar,
+[data-theme="dark"] .frame-preview-container {
+  background-color: #13192B !important;
+  border-color: #263352 !important;
+}
+
+/* ── Global Contrast Boost for Text ── */
+[data-theme="dark"] .section-label {
+  color: #93C5FD !important;
+}
+[data-theme="dark"] .filter-chip {
+  background-color: #13192B !important;
+  border-color: #263352 !important;
+  color: #E2E8F0 !important;
+}
+[data-theme="dark"] .filter-chip.active {
+  background: var(--brand-gradient) !important;
+  color: #FFFFFF !important;
+  border-color: transparent !important;
 }
 
 
