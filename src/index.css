@@ -296,23 +296,28 @@ ul, ol {
    ANNOUNCEMENT BAR
    ===================================================== */
 .announcement-bar {
-  background: var(--color-primary-navy);
-  color: var(--color-white);
+  background: linear-gradient(135deg, #172A72 0%, #216DB2 50%, #3D3A86 100%);
+  color: #FFFFFF !important;
   text-align: center;
   padding: 0 16px;
   height: var(--announcement-height);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12.5px;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  user-select: none;
 }
 
 .announcement-bar span {
-  color: var(--color-pink);
-  margin: 0 8px;
+  color: #F472B6 !important;
+  margin: 0 10px;
+  font-size: 14px;
+  line-height: 1;
 }
 
 /* =====================================================
@@ -2948,7 +2953,14 @@ ul, ol {
 
 /* Announcement Bar */
 [data-theme="dark"] .announcement-bar {
-  background: linear-gradient(135deg, #1E1B4B 0%, #311B92 100%);
+  background: linear-gradient(135deg, #172554 0%, #1E1B4B 50%, #311B92 100%);
+  color: #FFFFFF !important;
+  border-bottom-color: rgba(255, 255, 255, 0.12);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+}
+
+[data-theme="dark"] .announcement-bar span {
+  color: #F472B6 !important;
 }
 
 /* Cards & Layout Containers */
