@@ -1032,3 +1032,245 @@ export async function createProductReview(reviewData) {
 
   return { success: true, review: { ...payload, id: `rev-${Date.now()}` } };
 }
+
+// =====================================================
+// OFFLINE SALES SERVICE FUNCTIONS
+// =====================================================
+
+// Helper to convert File to Base64 string for reliable localStorage image persistence
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = error => reject(error);
+  });
+}
+
+// Upload offline sale photo to Supabase storage bucket (custom-photos or product-images) with base64 fallback
+export async function uploadOfflineSaleImage(file) {
+  if (!file) return { url: null };
+  if (typeof file === 'string') return { url: file };
+
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const ext = file.name.split('.').pop() || 'jpg';
+      const fileName = `offline-sale-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from('custom-photos')
+        .upload(fileName, file, { cacheControl: '3600', upsert: false });
+
+      if (!uploadError) {
+        const { data } = supabase.storage.from('custom-photos').getPublicUrl(fileName);
+        if (data?.publicUrl) {
+          return { url: data.publicUrl, source: 'supabase' };
+        }
+      }
+    } catch (err) {
+      console.warn('Supabase offline sale photo upload warning, falling back to base64 encoding:', err);
+    }
+  }
+
+  // Fallback to Base64 data URL for offline / local storage persistence
+  try {
+    const base64Url = await fileToBase64(file);
+    return { url: base64Url, source: 'local' };
+  } catch (err) {
+    console.error('File to base64 conversion failed:', err);
+    return { url: null, source: 'local' };
+  }
+}
+
+// Fetch all offline sales
+export async function getOfflineSales() {
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('offline_sales')
+        .select('*')
+        .order('order_date', { ascending: false });
+
+      if (!error && data) {
+        return data;
+      }
+    } catch (err) {
+      console.error('Fetch Supabase Offline Sales Error:', err);
+    }
+  }
+
+  // LocalStorage fallback
+  try {
+    const localData = JSON.parse(localStorage.getItem('everframe_offline_sales') || '[]');
+    return localData.sort((a, b) => new Date(b.created_at || b.order_date) - new Date(a.created_at || a.order_date));
+  } catch {
+    return [];
+  }
+}
+
+// Create a new offline sale
+export async function createOfflineSale(formData, imageFile = null) {
+  const cost = parseFloat(formData.cost_price) || 0;
+  const sold = parseFloat(formData.sold_price) || 0;
+  const profit = sold - cost;
+
+  let photoUrl = formData.photo_url || null;
+  if (imageFile) {
+    const uploadRes = await uploadOfflineSaleImage(imageFile);
+    if (uploadRes.url) {
+      photoUrl = uploadRes.url;
+    }
+  }
+
+  const payload = {
+    customer_name: (formData.customer_name || '').trim(),
+    order_date: formData.order_date || new Date().toISOString().split('T')[0],
+    frame_name: (formData.frame_name || '').trim(),
+    category: (formData.category || 'photo-frames').trim(),
+    cost_price: cost,
+    sold_price: sold,
+    profit: profit,
+    photo_url: photoUrl,
+    notes: (formData.notes || '').trim() || null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+
+  // Save to localStorage fallback first for instant update
+  let localRecord = null;
+  try {
+    localRecord = { ...payload, id: `OFFLINE-${Date.now()}` };
+    const localSales = JSON.parse(localStorage.getItem('everframe_offline_sales') || '[]');
+    localStorage.setItem('everframe_offline_sales', JSON.stringify([localRecord, ...localSales]));
+  } catch (e) {
+    console.error('LocalStorage offline sale error:', e);
+  }
+
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('offline_sales')
+        .insert([payload])
+        .select()
+        .single();
+
+      if (!error && data) {
+        // Replace temporary local fallback with real Supabase record
+        try {
+          const localSales = JSON.parse(localStorage.getItem('everframe_offline_sales') || '[]');
+          const updatedLocal = localSales.map(s => s.id === localRecord?.id ? data : s);
+          localStorage.setItem('everframe_offline_sales', JSON.stringify(updatedLocal));
+        } catch {}
+
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('everframe_offline_sale_updated', { detail: { sale: data } }));
+        }
+        return { success: true, sale: data, source: 'supabase' };
+      }
+    } catch (err) {
+      console.error('Supabase create offline sale error:', err);
+    }
+  }
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('everframe_offline_sale_updated', { detail: { sale: localRecord } }));
+  }
+
+  return { success: true, sale: localRecord, source: 'local' };
+}
+
+// Update an existing offline sale
+export async function updateOfflineSale(id, formData, newImageFile = null) {
+  const cost = parseFloat(formData.cost_price) || 0;
+  const sold = parseFloat(formData.sold_price) || 0;
+  const profit = sold - cost;
+
+  let photoUrl = formData.photo_url || null;
+  if (newImageFile) {
+    const uploadRes = await uploadOfflineSaleImage(newImageFile);
+    if (uploadRes.url) {
+      photoUrl = uploadRes.url;
+    }
+  }
+
+  const updates = {
+    customer_name: (formData.customer_name || '').trim(),
+    order_date: formData.order_date || new Date().toISOString().split('T')[0],
+    frame_name: (formData.frame_name || '').trim(),
+    category: (formData.category || 'photo-frames').trim(),
+    cost_price: cost,
+    sold_price: sold,
+    profit: profit,
+    photo_url: photoUrl,
+    notes: (formData.notes || '').trim() || null,
+    updated_at: new Date().toISOString(),
+  };
+
+  // Update in localStorage
+  try {
+    const localSales = JSON.parse(localStorage.getItem('everframe_offline_sales') || '[]');
+    const updated = localSales.map(s => String(s.id) === String(id) ? { ...s, ...updates } : s);
+    localStorage.setItem('everframe_offline_sales', JSON.stringify(updated));
+  } catch (e) {
+    console.error('Update local offline sale error:', e);
+  }
+
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('offline_sales')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (!error && data) {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('everframe_offline_sale_updated', { detail: { sale: data } }));
+        }
+        return { success: true, sale: data, source: 'supabase' };
+      }
+    } catch (err) {
+      console.error('Supabase update offline sale error:', err);
+    }
+  }
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('everframe_offline_sale_updated', { detail: { sale: { id, ...updates } } }));
+  }
+
+  return { success: true, sale: { id, ...updates }, source: 'local' };
+}
+
+// Delete an offline sale
+export async function deleteOfflineSale(id) {
+  // Delete from localStorage
+  try {
+    const localSales = JSON.parse(localStorage.getItem('everframe_offline_sales') || '[]');
+    const filtered = localSales.filter(s => String(s.id) !== String(id));
+    localStorage.setItem('everframe_offline_sales', JSON.stringify(filtered));
+  } catch (e) {
+    console.error('Delete local offline sale error:', e);
+  }
+
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { error } = await supabase
+        .from('offline_sales')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('Supabase delete offline sale error:', error);
+      }
+    } catch (err) {
+      console.error('Delete offline sale exception:', err);
+    }
+  }
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('everframe_offline_sale_updated', { detail: { deletedId: id } }));
+  }
+
+  return { success: true };
+}
+

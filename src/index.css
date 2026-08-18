@@ -1191,7 +1191,7 @@ ul, ol {
    PROCESS SECTION (Deep Navy Brand Background)
    ===================================================== */
 .process-section {
-  background: var(--color-primary-navy);
+  background: linear-gradient(135deg, #172A72 0%, #3D3A86 100%);
   padding: 100px 0;
   position: relative;
   overflow: hidden;
@@ -1403,7 +1403,7 @@ ul, ol {
   font-family: var(--font-serif);
   font-size: 24px;
   font-weight: 700;
-  color: var(--color-white);
+  color: #FFFFFF !important;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -1463,7 +1463,7 @@ ul, ol {
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--color-white);
+  color: #FFFFFF !important;
   margin-bottom: 20px;
 }
 
@@ -1487,9 +1487,9 @@ ul, ol {
   width: 100%;
   padding: 11px 14px;
   background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: var(--radius-sm);
-  color: var(--color-white);
+  color: #FFFFFF !important;
   font-size: 14px;
   margin-bottom: 10px;
   outline: none;
@@ -2811,4 +2811,885 @@ ul, ol {
   .summary-row { font-size: 13.5px; }
   .summary-row.total { font-size: 15px; }
 }
+
+/* =====================================================
+   ADMIN PANEL ENHANCED UI & ANIMATIONS
+   ===================================================== */
+
+/* Sidebar Navigation Hover & Active Polish */
+.account-nav a {
+  position: relative;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.account-nav a:hover {
+  background: rgba(33, 109, 178, 0.06);
+  color: var(--color-primary-navy);
+  transform: translateX(4px);
+}
+
+.account-nav a.active {
+  background: linear-gradient(90deg, rgba(33, 109, 178, 0.12) 0%, rgba(61, 58, 134, 0.06) 100%);
+  color: var(--color-primary-navy);
+  font-weight: 700;
+  box-shadow: inset 3px 0 0 var(--color-blue);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+/* Admin Stat Cards Interactive Hover */
+.admin-stat-card {
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  cursor: pointer;
+}
+
+.admin-stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 28px rgba(23, 42, 114, 0.1);
+  border-color: rgba(33, 109, 178, 0.3) !important;
+}
+
+/* Admin Table Row Hover */
+.admin-table-row {
+  transition: all 0.2s ease !important;
+}
+
+.admin-table-row:hover {
+  background-color: rgba(246, 247, 251, 0.8) !important;
+}
+
+/* Live Indicator Pulse */
+@keyframes livePulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(22, 163, 74, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(22, 163, 74, 0);
+  }
+}
+
+.live-badge-pulse {
+  animation: livePulse 2s infinite;
+}
+
+/* Modal Popup Zoom In Animation */
+@keyframes modalZoomIn {
+  from {
+    opacity: 0;
+    transform: scale(0.94) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.admin-modal-anim {
+  animation: modalZoomIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Button Micro-Interactions */
+.btn {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+}
+
+.btn:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* =====================================================
+   DARK MODE COLOR SYSTEM ([data-theme="dark"])
+   ===================================================== */
+[data-theme="dark"] {
+  /* Rich Deep Midnight Navy Palette */
+  --color-white: #13192B;
+  --color-surface: #192038;
+  --color-surface-2: #222C4A;
+  --color-dark: #F8FAFC;
+  --color-dark-2: #F1F5F9;
+  --color-dark-3: #CBD5E1;
+  --color-text: #F8FAFC;
+  --color-text-muted: #94A3B8;
+  --color-text-light: #64748B;
+  --color-border: #2A3655;
+  --color-border-light: #1E2842;
+
+  --color-primary-navy: #93C5FD;
+  --color-blue: #60A5FA;
+  --color-indigo: #818CF8;
+  --color-purple: #C084FC;
+  --color-pink: #F472B6;
+
+  --brand-gradient: linear-gradient(135deg, #3B82F6 0%, #6366F1 45%, #EC4899 100%);
+  --brand-gradient-soft: linear-gradient(135deg, rgba(59, 130, 246, 0.18) 0%, rgba(99, 102, 241, 0.18) 45%, rgba(236, 72, 153, 0.18) 100%);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.75);
+  --shadow-card: 0 6px 20px rgba(0, 0, 0, 0.45);
+}
+
+[data-theme="dark"] body {
+  background-color: #0A0E1A;
+  color: #F8FAFC;
+}
+
+/* Glassmorphic Navigation Bar */
+[data-theme="dark"] .navbar {
+  background: rgba(13, 18, 32, 0.88);
+  backdrop-filter: blur(14px);
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Announcement Bar */
+[data-theme="dark"] .announcement-bar {
+  background: linear-gradient(135deg, #1E1B4B 0%, #311B92 100%);
+}
+
+/* Cards & Layout Containers */
+[data-theme="dark"] .account-sidebar,
+[data-theme="dark"] .account-content,
+[data-theme="dark"] .product-card,
+[data-theme="dark"] .cart-item,
+[data-theme="dark"] .checkout-section,
+[data-theme="dark"] .tracking-card,
+[data-theme="dark"] .auth-card {
+  background-color: #13192B !important;
+  border-color: #263352 !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Form Controls & Inputs */
+[data-theme="dark"] .form-input,
+[data-theme="dark"] select.form-input,
+[data-theme="dark"] textarea.form-input {
+  background-color: #1A233A !important;
+  color: #F8FAFC !important;
+  border-color: #2E3C62 !important;
+}
+
+[data-theme="dark"] .form-input:focus {
+  border-color: #60A5FA !important;
+  background-color: #13192B !important;
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.25) !important;
+}
+
+[data-theme="dark"] .form-label {
+  color: #CBD5E1 !important;
+}
+
+/* Data Tables */
+[data-theme="dark"] table {
+  background-color: #13192B !important;
+}
+
+[data-theme="dark"] table th {
+  background-color: #1A233A !important;
+  color: #94A3B8 !important;
+  border-bottom-color: #2A3655 !important;
+}
+
+[data-theme="dark"] table td {
+  border-bottom-color: #1E2842 !important;
+  color: #E2E8F0 !important;
+}
+
+[data-theme="dark"] .admin-table-row:hover {
+  background-color: rgba(34, 44, 74, 0.6) !important;
+}
+
+/* Stat Cards & Widgets */
+[data-theme="dark"] .admin-stat-card {
+  background: linear-gradient(145deg, #13192B 0%, #1A233A 100%) !important;
+  border-color: #263352 !important;
+}
+
+[data-theme="dark"] .admin-stat-card:hover {
+  border-color: rgba(96, 165, 250, 0.4) !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6) !important;
+}
+
+/* Sidebar Nav Links */
+[data-theme="dark"] .account-nav a {
+  color: #94A3B8;
+}
+
+[data-theme="dark"] .account-nav a:hover {
+  background: rgba(96, 165, 250, 0.12);
+  color: #93C5FD;
+}
+
+[data-theme="dark"] .account-nav a.active {
+  background: linear-gradient(90deg, rgba(96, 165, 250, 0.22) 0%, rgba(192, 132, 252, 0.12) 100%);
+  color: #93C5FD;
+  box-shadow: inset 3px 0 0 #60A5FA;
+}
+
+/* Buttons */
+[data-theme="dark"] .btn-outline {
+  border-color: #2E3C62;
+  color: #E2E8F0;
+  background: transparent;
+}
+
+[data-theme="dark"] .btn-outline:hover {
+  border-color: #60A5FA;
+  color: #60A5FA;
+  background: rgba(96, 165, 250, 0.1);
+}
+
+/* Typography & Headings */
+[data-theme="dark"] h1,
+[data-theme="dark"] h2,
+[data-theme="dark"] h3,
+[data-theme="dark"] h4 {
+  color: #F8FAFC;
+}
+
+[data-theme="dark"] .section-label {
+  color: #60A5FA;
+}
+
+/* Footer */
+[data-theme="dark"] .footer {
+  background-color: #080B14;
+  border-top-color: #1E2842;
+}
+
+[data-theme="dark"] .footer-brand-desc,
+[data-theme="dark"] .footer-links a {
+  color: #CBD5E1 !important;
+}
+
+[data-theme="dark"] .footer-links a:hover {
+  color: #60A5FA !important;
+}
+
+[data-theme="dark"] .process-section {
+  background: linear-gradient(135deg, #13192B 0%, #1A233A 100%) !important;
+  border-top: 1px solid #263352;
+  border-bottom: 1px solid #263352;
+}
+
+/* Category Chips & Filters */
+[data-theme="dark"] .category-chip {
+  background-color: #192038 !important;
+  color: #E2E8F0 !important;
+  border-color: #2A3655 !important;
+}
+
+[data-theme="dark"] .category-chip:hover,
+[data-theme="dark"] .category-chip.active {
+  background: linear-gradient(135deg, #3B82F6 0%, #6366F1 100%) !important;
+  color: #FFFFFF !important;
+  border-color: transparent !important;
+}
+
+/* Payment & Radio Options */
+[data-theme="dark"] .payment-option {
+  background-color: #1A233A !important;
+  border-color: #2E3C62 !important;
+  color: #F8FAFC !important;
+}
+
+[data-theme="dark"] .payment-option.selected {
+  border-color: #60A5FA !important;
+  background: rgba(96, 165, 250, 0.15) !important;
+}
+
+[data-theme="dark"] .payment-label {
+  color: #F8FAFC !important;
+}
+
+/* Custom Frame Steps & Interactive Items */
+[data-theme="dark"] .gifts-section {
+  background-color: #0D1222 !important;
+}
+
+[data-theme="dark"] .custom-frame-section {
+  background-color: #0A0E1A !important;
+}
+
+[data-theme="dark"] .step-item {
+  background-color: #192038 !important;
+  border-color: #2A3655 !important;
+}
+
+[data-theme="dark"] .step-item:hover,
+[data-theme="dark"] .step-item.active {
+  background-color: #13192B !important;
+  border-color: #60A5FA !important;
+}
+
+[data-theme="dark"] .step-label {
+  color: #CBD5E1 !important;
+}
+
+[data-theme="dark"] .step-item.active .step-label {
+  color: #F8FAFC !important;
+}
+
+/* Product Wishlist Button */
+[data-theme="dark"] .wishlist-btn {
+  background: rgba(26, 35, 58, 0.92) !important;
+  color: #F8FAFC !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+
+[data-theme="dark"] .wishlist-btn:hover {
+  background: rgba(59, 130, 246, 0.3) !important;
+  color: #F472B6 !important;
+}
+
+/* Auth Pages & Modals */
+[data-theme="dark"] .auth-page {
+  background-color: #0A0E1A !important;
+}
+
+/* ── Search & Sort Controls ── */
+[data-theme="dark"] .search-bar {
+  background-color: #13192B !important;
+  border-color: #2A3655 !important;
+}
+
+[data-theme="dark"] .search-bar input {
+  color: #F8FAFC !important;
+}
+
+[data-theme="dark"] .search-bar input::placeholder {
+  color: #64748B !important;
+}
+
+[data-theme="dark"] .sort-select {
+  background-color: #13192B !important;
+  color: #E2E8F0 !important;
+  border-color: #2A3655 !important;
+}
+
+[data-theme="dark"] .sort-select option {
+  background-color: #13192B;
+  color: #E2E8F0;
+}
+
+/* ── Shop Filter Chips ── */
+[data-theme="dark"] .filter-chip {
+  background-color: #192038 !important;
+  color: #CBD5E1 !important;
+  border-color: #2A3655 !important;
+}
+
+[data-theme="dark"] .filter-chip:hover {
+  border-color: #60A5FA !important;
+  color: #60A5FA !important;
+}
+
+[data-theme="dark"] .filter-chip.active {
+  background: linear-gradient(135deg, #3B82F6 0%, #6366F1 45%, #EC4899 100%) !important;
+  color: #FFFFFF !important;
+  border-color: transparent !important;
+}
+
+/* ── Cart Page ── */
+[data-theme="dark"] .cart-summary {
+  background-color: #13192B !important;
+  border-color: #2A3655 !important;
+}
+
+[data-theme="dark"] .cart-summary-title {
+  color: #F8FAFC !important;
+  border-bottom-color: #2A3655 !important;
+}
+
+[data-theme="dark"] .cart-item-name {
+  color: #F8FAFC !important;
+}
+
+[data-theme="dark"] .cart-item-price {
+  color: #93C5FD !important;
+}
+
+[data-theme="dark"] .cart-item {
+  border-bottom-color: #1E2842 !important;
+}
+
+[data-theme="dark"] .summary-row.total {
+  color: #93C5FD !important;
+  border-top-color: #2A3655 !important;
+}
+
+/* Free delivery banner — override hardcoded green */
+[data-theme="dark"] .cart-page [style*="#f0fdf4"] {
+  background: #0D2B1A !important;
+  color: #34D399 !important;
+}
+
+/* Quantity selector */
+[data-theme="dark"] .qty-selector {
+  background-color: #1A233A !important;
+  border-color: #2A3655 !important;
+}
+
+[data-theme="dark"] .qty-btn {
+  color: #E2E8F0 !important;
+}
+
+[data-theme="dark"] .qty-btn:hover {
+  background: #222C4A !important;
+}
+
+[data-theme="dark"] .qty-input {
+  color: #F8FAFC !important;
+  border-color: #2A3655 !important;
+}
+
+/* Variant buttons (size chooser) */
+[data-theme="dark"] .variant-btn {
+  background-color: #192038 !important;
+  color: #CBD5E1 !important;
+  border-color: #2A3655 !important;
+}
+
+[data-theme="dark"] .variant-btn:hover {
+  border-color: #60A5FA !important;
+}
+
+[data-theme="dark"] .variant-btn.active {
+  background: linear-gradient(135deg, #1E3A8A 0%, #3B4DB8 100%) !important;
+  color: #FFFFFF !important;
+  border-color: transparent !important;
+}
+
+/* ── Custom Frame Builder ── */
+[data-theme="dark"] .builder-step {
+  background-color: #13192B !important;
+  border-color: #2A3655 !important;
+}
+
+[data-theme="dark"] .builder-step-header:hover {
+  background: rgba(96, 165, 250, 0.08) !important;
+}
+
+[data-theme="dark"] .builder-step.active .builder-step-header {
+  background: linear-gradient(90deg, rgba(59, 130, 246, 0.18) 0%, rgba(99, 102, 241, 0.10) 100%) !important;
+}
+
+[data-theme="dark"] .builder-step-title {
+  color: #E2E8F0 !important;
+}
+
+[data-theme="dark"] .builder-step-num {
+  background: #2A3655 !important;
+  color: #94A3B8 !important;
+}
+
+[data-theme="dark"] .preview-area {
+  background-color: #13192B !important;
+  border-color: #2A3655 !important;
+}
+
+[data-theme="dark"] .preview-canvas {
+  background-color: #0D1222 !important;
+}
+
+[data-theme="dark"] .upload-area {
+  background-color: #192038 !important;
+  border-color: #2A3655 !important;
+}
+
+[data-theme="dark"] .upload-area:hover {
+  background-color: #13192B !important;
+  border-color: #60A5FA !important;
+}
+
+[data-theme="dark"] .frame-option {
+  background-color: #192038 !important;
+  border-color: #2A3655 !important;
+}
+
+[data-theme="dark"] .frame-option:hover {
+  border-color: #60A5FA !important;
+}
+
+[data-theme="dark"] .frame-option.selected {
+  border-color: #818CF8 !important;
+  background: rgba(99, 102, 241, 0.2) !important;
+}
+
+[data-theme="dark"] .frame-option-name {
+  color: #E2E8F0 !important;
+}
+
+/* Preview panel bottom info strip */
+[data-theme="dark"] .preview-area [style*="border-top"] {
+  border-top-color: #2A3655 !important;
+}
+
+/* ── Order Tracking ── */
+[data-theme="dark"] .tracking-page {
+  background-color: #0A0E1A;
+}
+
+[data-theme="dark"] .tracking-input-row input {
+  background-color: #1A233A !important;
+  color: #F8FAFC !important;
+  border-color: #2A3655 !important;
+}
+
+[data-theme="dark"] .tracking-input-row input:focus {
+  border-color: #60A5FA !important;
+}
+
+[data-theme="dark"] .tracking-input-row input::placeholder {
+  color: #64748B !important;
+}
+
+[data-theme="dark"] .status-dot {
+  background-color: #192038 !important;
+  border-color: #2A3655 !important;
+}
+
+/* ── Contact Page (inline-styled components) ── */
+/* These target the hardcoded background: '#fff' on the form card */
+[data-theme="dark"] .contact-form-card {
+  background-color: #13192B !important;
+  border: 1px solid #2A3655 !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5) !important;
+}
+
+[data-theme="dark"] .contact-info-card {
+  background-color: #192038 !important;
+  border: 1px solid #2A3655 !important;
+}
+
+/* Coupon input field */
+[data-theme="dark"] .coupon-input input {
+  background-color: #1A233A !important;
+  color: #F8FAFC !important;
+  border-color: #2A3655 !important;
+}
+
+[data-theme="dark"] .coupon-input input::placeholder {
+  color: #64748B !important;
+}
+
+/* ── Product Detail Gallery & Reviews ── */
+[data-theme="dark"] .gallery-main {
+  background-color: #13192B !important;
+  border-color: #2A3655 !important;
+}
+
+[data-theme="dark"] .gallery-thumb {
+  border-color: #2A3655 !important;
+  background-color: #192038 !important;
+}
+
+[data-theme="dark"] .gallery-thumb.active,
+[data-theme="dark"] .gallery-thumb:hover {
+  border-color: #60A5FA !important;
+}
+
+[data-theme="dark"] .product-description {
+  color: #94A3B8 !important;
+}
+
+[data-theme="dark"] .section-heading {
+  color: #F8FAFC !important;
+}
+
+/* ── Breadcrumb ── */
+[data-theme="dark"] .breadcrumb,
+[data-theme="dark"] .breadcrumb a,
+[data-theme="dark"] .breadcrumb span {
+  color: #64748B !important;
+}
+
+[data-theme="dark"] .breadcrumb a:hover {
+  color: #60A5FA !important;
+}
+
+/* ── Empty States ── */
+[data-theme="dark"] .empty-state {
+  color: #94A3B8 !important;
+}
+
+[data-theme="dark"] .empty-state h3 {
+  color: #E2E8F0 !important;
+}
+
+[data-theme="dark"] .empty-state-icon {
+  color: #2A3655 !important;
+}
+
+/* ── Gifts Section Cards ── */
+[data-theme="dark"] .gift-card {
+  background-color: #13192B !important;
+  border-color: #2A3655 !important;
+}
+
+[data-theme="dark"] .gift-title {
+  color: #F8FAFC !important;
+}
+
+[data-theme="dark"] .gift-desc {
+  color: #94A3B8 !important;
+}
+
+/* =====================================================
+   ADMIN PANEL — LIGHT MODE POLISH
+   ===================================================== */
+
+/* Sidebar */
+.account-sidebar {
+  background: linear-gradient(180deg, #FFFFFF 0%, #F6F7FB 100%);
+  border: 1px solid var(--color-border-light);
+}
+
+/* Content area */
+.account-content {
+  background: #FFFFFF;
+  border: 1px solid var(--color-border-light);
+}
+
+/* Stat cards — refined light mode */
+.admin-stat-card {
+  background: linear-gradient(145deg, #FFFFFF 0%, #F8F9FD 100%) !important;
+  border: 1.5px solid #ECEEF6 !important;
+  box-shadow: 0 2px 12px rgba(23, 42, 114, 0.06) !important;
+}
+
+/* Admin search bars — fix hardcoded #fff */
+.account-content .search-bar {
+  background: var(--color-surface) !important;
+  border-color: var(--color-border) !important;
+}
+
+/* Order/sale feed cards (light) */
+.account-content [style*="background: 'var(--color-white)'"],
+.account-content [style*="background: var(--color-white)"] {
+  border-color: var(--color-border) !important;
+}
+
+/* Filters toolbar strip */
+.account-content [style*="background: 'var(--color-surface)'"] {
+  background: var(--color-surface) !important;
+  border-color: var(--color-border-light) !important;
+}
+
+/* Admin nav link active — improved gradient */
+.account-page .account-nav a.active {
+  background: linear-gradient(90deg, rgba(33, 109, 178, 0.1) 0%, rgba(61, 58, 134, 0.06) 100%);
+  color: #172A72;
+  font-weight: 700;
+  box-shadow: inset 3px 0 0 #216DB2;
+}
+
+/* =====================================================
+   ADMIN PANEL — DARK MODE OVERRIDES
+   ===================================================== */
+
+/* Sidebar */
+[data-theme="dark"] .account-sidebar {
+  background: linear-gradient(180deg, #13192B 0%, #111828 100%) !important;
+  border-color: #1E2842 !important;
+}
+
+/* Content area */
+[data-theme="dark"] .account-content {
+  background: #13192B !important;
+  border-color: #1E2842 !important;
+}
+
+/* Admin-specific search bar (has hardcoded background: '#fff' inline) */
+[data-theme="dark"] .account-content .search-bar {
+  background-color: #1A233A !important;
+  border-color: #2A3655 !important;
+}
+
+[data-theme="dark"] .account-content .search-bar input {
+  color: #F8FAFC !important;
+}
+
+[data-theme="dark"] .account-content .search-bar input::placeholder {
+  color: #4B5A7A !important;
+}
+
+/* Filter toolbar background */
+[data-theme="dark"] .account-content [style*="var(--color-surface)"] {
+  background-color: #192038 !important;
+  border-color: #1E2842 !important;
+}
+
+/* Stat cards — dark */
+[data-theme="dark"] .admin-stat-card {
+  background: linear-gradient(145deg, #13192B 0%, #192038 100%) !important;
+  border-color: #263352 !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4) !important;
+}
+
+/* Admin stat value text */
+[data-theme="dark"] .admin-stat-card [style*="var(--color-primary-navy)"] {
+  color: #93C5FD !important;
+}
+
+/* Order / sale feed cards (dark) — target inline background: var(--color-white) */
+[data-theme="dark"] .account-content [style*="var(--color-white)"] {
+  background-color: #192038 !important;
+  border-color: #263352 !important;
+}
+
+/* Live Data badge (hardcoded #eef9ee / green) */
+[data-theme="dark"] [style*="#eef9ee"] {
+  background-color: #0A2A1A !important;
+  color: #34D399 !important;
+}
+
+[data-theme="dark"] .live-badge-pulse [style*="#eef9ee"] {
+  background-color: #0A2A1A !important;
+}
+
+/* ONLINE/OFFLINE type badge pills (hardcoded #e0f2fe / #dcfce7) */
+[data-theme="dark"] [style*="#e0f2fe"] {
+  background-color: #0C2340 !important;
+  color: #60A5FA !important;
+}
+
+[data-theme="dark"] [style*="#dcfce7"] {
+  background-color: #082B18 !important;
+  color: #34D399 !important;
+}
+
+/* Order items sub-section strip */
+[data-theme="dark"] .account-content [style*="var(--color-surface)"] {
+  background-color: #192038 !important;
+  border-color: #1E2842 !important;
+}
+
+/* Admin table header */
+[data-theme="dark"] .account-page table th {
+  background-color: #192038 !important;
+  color: #64748B !important;
+  border-bottom-color: #2A3655 !important;
+}
+
+[data-theme="dark"] .account-page table td {
+  border-bottom-color: #1E2842 !important;
+  color: #CBD5E1 !important;
+}
+
+[data-theme="dark"] .account-page table tr:hover td {
+  background-color: rgba(34, 44, 74, 0.5) !important;
+}
+
+/* Admin modals & form overlays */
+[data-theme="dark"] .account-page [style*="background: 'rgba(10,14,30"],
+[data-theme="dark"] .account-page [style*="background: 'rgba(10, 14, 30"] {
+  background: rgba(5, 8, 18, 0.72) !important;
+}
+
+[data-theme="dark"] .account-page [style*="var(--color-white)"][style*="borderRadius"] {
+  background-color: #13192B !important;
+  border-color: #2A3655 !important;
+}
+
+/* Product/offline form selects and inputs */
+[data-theme="dark"] .account-page input,
+[data-theme="dark"] .account-page textarea,
+[data-theme="dark"] .account-page select {
+  background-color: #1A233A !important;
+  color: #F8FAFC !important;
+  border-color: #2A3655 !important;
+}
+
+[data-theme="dark"] .account-page input::placeholder,
+[data-theme="dark"] .account-page textarea::placeholder {
+  color: #4B5A7A !important;
+}
+
+[data-theme="dark"] .account-page input:focus,
+[data-theme="dark"] .account-page textarea:focus,
+[data-theme="dark"] .account-page select:focus {
+  border-color: #60A5FA !important;
+  background-color: #13192B !important;
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2) !important;
+}
+
+/* Account nav active state */
+[data-theme="dark"] .account-page .account-nav a.active {
+  background: linear-gradient(90deg, rgba(96, 165, 250, 0.2) 0%, rgba(129, 140, 248, 0.12) 100%) !important;
+  color: #93C5FD !important;
+  box-shadow: inset 3px 0 0 #60A5FA !important;
+}
+
+/* Theme toggle button in sidebar */
+[data-theme="dark"] .account-page nav [style*="var(--color-surface)"] {
+  background-color: #192038 !important;
+  border-color: #2A3655 !important;
+  color: #E2E8F0 !important;
+}
+
+/* Product image upload box */
+[data-theme="dark"] .account-page .upload-area,
+[data-theme="dark"] .account-page [style*="border: '2px dashed"] {
+  background-color: #192038 !important;
+  border-color: #2A3655 !important;
+}
+
+/* Error messages inside admin */
+[data-theme="dark"] .account-page [style*="#FFF1F2"] {
+  background-color: #2A0A12 !important;
+  border-color: #7F1D33 !important;
+  color: #FCA5A5 !important;
+}
+
+/* Coupon code display cell */
+[data-theme="dark"] .account-page [style*="fontFamily: 'monospace'"],
+[data-theme="dark"] .account-page [style*="fontFamily: monospace"] {
+  background-color: #192038 !important;
+  color: #93C5FD !important;
+}
+
+/* =====================================================
+   ADMIN SCROLLABLE LIST — Custom Scrollbar & Shadow
+   ===================================================== */
+
+/* Thin scrollbar for the orders/sales scroll region */
+.account-content [style*="overflowY: 'auto'"],
+.account-content [style*="overflow-y: auto"],
+.account-content [style*="overflowY"] {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+.account-content [style*="overflowY: 'auto'"]::-webkit-scrollbar,
+.account-content [style*="overflowY"]::-webkit-scrollbar {
+  width: 5px;
+}
+
+.account-content [style*="overflowY: 'auto'"]::-webkit-scrollbar-track,
+.account-content [style*="overflowY"]::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.account-content [style*="overflowY: 'auto'"]::-webkit-scrollbar-thumb,
+.account-content [style*="overflowY"]::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 10px;
+}
+
+[data-theme="dark"] .account-content [style*="overflowY"]::-webkit-scrollbar-thumb {
+  background: #2A3655;
+}
+
+
+
+
+
+
+
+
 

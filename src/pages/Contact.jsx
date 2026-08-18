@@ -25,10 +25,10 @@ export default function Contact() {
     width: "100%",
     padding: "11px 14px",
     borderRadius: 10,
-    border: "1.5px solid #e0dff0",
+    border: "1.5px solid var(--color-border, #e0dff0)",
     fontSize: 14,
-    color: "var(--text-primary)",
-    background: "#fafafa",
+    color: "var(--color-text)",
+    background: "var(--color-surface)",
     outline: "none",
     transition: "border-color 0.2s",
     boxSizing: "border-box",
@@ -61,11 +61,12 @@ export default function Contact() {
             ].map(({ icon, title, detail }) => (
               <div
                 key={title}
+                className="contact-info-card"
                 style={{
                   display: "flex",
                   alignItems: "center",
                   gap: 20,
-                  background: "var(--bg-secondary, #f8f8fc)",
+                  background: "var(--color-surface, #f8f8fc)",
                   borderRadius: 16,
                   padding: "20px 24px",
                   boxShadow: "0 2px 12px rgba(80,60,180,0.07)",
@@ -85,12 +86,14 @@ export default function Contact() {
           </div>
 
           {/* Contact Form */}
-          <div style={{
-            background: "#fff",
-            borderRadius: 20,
-            padding: "40px 36px",
-            boxShadow: "0 4px 32px rgba(80,60,180,0.10)",
-          }}>
+          <div
+            className="contact-form-card"
+            style={{
+              background: "var(--color-white)",
+              borderRadius: 20,
+              padding: "40px 36px",
+              boxShadow: "0 4px 32px rgba(80,60,180,0.10)",
+            }}>
             {submitted ? (
               <div style={{ textAlign: "center", padding: "40px 0" }}>
                 <div style={{ fontSize: 56, marginBottom: 16 }}>✅</div>

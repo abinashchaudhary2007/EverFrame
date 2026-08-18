@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
-import { Search, Heart, ShoppingBag, User, Menu, X } from 'lucide-react';
+import { Search, Heart, ShoppingBag, User, Menu, X, Sun, Moon } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 
 export default function Navbar() {
   const { user } = useAuth();
   const { cartCount } = useCart();
   const { wishlist } = useWishlist();
+  const { isDark, toggleTheme } = useTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -59,6 +61,17 @@ export default function Navbar() {
 
           {/* Actions */}
           <div className="navbar-actions">
+            {/* Theme Dark Mode Toggle */}
+            <button
+              className="navbar-icon-btn"
+              aria-label="Toggle Theme"
+              title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
+              onClick={toggleTheme}
+              style={{ transition: 'transform 0.3s ease' }}
+            >
+              {isDark ? <Sun size={20} color="#f59e0b" /> : <Moon size={20} color="#6366f1" />}
+            </button>
+
             <button
               className="navbar-icon-btn"
               aria-label="Search"
