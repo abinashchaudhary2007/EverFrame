@@ -205,7 +205,7 @@ export default function CustomFrame() {
           </p>
         </div>
 
-        <div className="builder-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 1.15fr) minmax(320px, 1fr)', gap: '36px', alignItems: 'start' }}>
+        <div className="builder-grid">
           
           {/* ====================================================
               LEFT: LIVE 3D INTERACTIVE VISUALIZER

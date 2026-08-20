@@ -728,7 +728,7 @@ export default function Admin() {
           </div>
         </div>
 
-        <div className="account-grid" style={{ gridTemplateColumns: '220px 1fr' }}>
+        <div className="account-grid">
           {/* Sidebar */}
           <div className="account-sidebar">
             <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-blue)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '16px' }}>

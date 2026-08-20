@@ -263,7 +263,7 @@ export default function Account() {
                     <Link to="/shop" className="btn btn-primary">Browse Frames</Link>
                   </div>
                 ) : (
-                  <div className="product-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
+                  <div className="product-grid">
                     {wishlist.map(product => <ProductCard key={product.id} product={product} />)}
                   </div>
                 )}
