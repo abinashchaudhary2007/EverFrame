@@ -341,7 +341,7 @@ export default function ProductDetail() {
           </div>
 
           {/* Rating Summary Card & Form Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 340px) 1fr', gap: '28px', marginBottom: '40px', alignItems: 'start' }}>
+          <div className="reviews-summary-grid">
             {/* Rating breakdown box */}
             <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border-light)', borderRadius: '16px', padding: '24px' }}>
               <div style={{ textAlign: 'center', paddingBottom: '20px', borderBottom: '1px solid var(--color-border-light)' }}>

@@ -85,9 +85,9 @@ export default function Home() {
       <ThoughtfulGiftsSection />
 
       {/* Trust Banner */}
-      <section style={{ background: 'var(--color-white)', padding: '48px 0', borderTop: '1px solid var(--color-border-light)' }}>
+      <section className="trust-banner-section">
         <div className="container">
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px', textAlign: 'center' }}>
+          <div className="trust-banner-grid">
             {[
               { icon: '🚚', title: 'Free Delivery', desc: 'On orders above Rs. 2,000' },
               { icon: '🎨', title: 'Custom Made', desc: 'Handcrafted to your specs' },

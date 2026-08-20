@@ -426,7 +426,7 @@ export default function Checkout() {
             <div style={{ padding: '24px 26px' }}>
 
               {/* Customer Info & Status Grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '18px', marginBottom: '22px', paddingBottom: '18px', borderBottom: '1px solid var(--color-border-light)' }}>
+              <div className="invoice-info-grid">
                 <div>
                   <div style={{ fontSize: '10.5px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-text-muted)', marginBottom: '6px' }}>Bill To & Delivery Address</div>
                   <div style={{ fontWeight: 800, fontSize: '15px', color: 'var(--color-dark)' }}>{od.name}</div>
@@ -519,7 +519,7 @@ export default function Checkout() {
           </div>
 
           {/* Action Buttons */}
-          <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
+          <div className="invoice-actions">
             <Link to="/" className="btn btn-outline" style={{ flex: 1, textAlign: 'center' }}>← Back to Home</Link>
             <Link to="/track-order" className="btn btn-outline" style={{ flex: 1, textAlign: 'center' }}>📦 Track Order</Link>
             <button
@@ -565,7 +565,7 @@ export default function Checkout() {
         </div>
 
         <form onSubmit={handleSubmit} noValidate>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: '24px', alignItems: 'start' }}>
+          <div className="checkout-grid">
 
             {/* LEFT */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
@@ -583,7 +583,7 @@ export default function Checkout() {
                 </div>
 
                 {/* Name + Phone */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
+                <div className="form-row" style={{ marginBottom: '14px' }}>
                   <div>
                     <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 700, color: 'var(--color-dark)', marginBottom: '5px' }}>Full Name *</label>
                     <input name="name" style={fieldStyle('name')} placeholder="Aarav Sharma" value={form.name} onChange={handleChange} autoComplete="name" />

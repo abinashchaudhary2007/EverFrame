@@ -87,7 +87,7 @@ export default function FloatingCartBar() {
       </div>
 
       {/* Main Text Content */}
-      <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+      <div className="floating-cart-text" style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}>
         <div style={{
           display: 'flex',
           alignItems: 'center',
@@ -98,7 +98,6 @@ export default function FloatingCartBar() {
           whiteSpace: 'nowrap',
           overflow: 'hidden',
           textOverflow: 'ellipsis',
-          maxWidth: '240px',
         }}>
           <span style={{
             display: 'inline-flex',
@@ -117,7 +116,7 @@ export default function FloatingCartBar() {
             {latestName} added
           </span>
         </div>
-        <div style={{ fontSize: '11.5px', color: '#93C5FD', marginTop: '1px', fontWeight: 600 }}>
+        <div style={{ fontSize: '11.5px', color: '#93C5FD', marginTop: '1px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {cartCount} {cartCount === 1 ? 'item' : 'items'} · NPR {subtotal.toLocaleString()}
         </div>
       </div>

@@ -50,7 +50,7 @@ export default function Contact() {
           </p>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1.6fr", gap: 48, alignItems: "start" }}>
+        <div className="contact-grid">
           {/* Info Cards */}
           <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
             {[
@@ -91,7 +91,7 @@ export default function Contact() {
             style={{
               background: "var(--color-white)",
               borderRadius: 20,
-              padding: "40px 36px",
+              padding: "36px 28px",
               boxShadow: "0 4px 32px rgba(80,60,180,0.10)",
             }}>
             {submitted ? (
@@ -109,7 +109,7 @@ export default function Contact() {
               </div>
             ) : (
               <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                <div className="form-row">
                   <div>
                     <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "var(--text-primary)", marginBottom: 6 }}>Your Name</label>
                     <input name="name" value={form.name} onChange={handleChange} required placeholder="John Doe" style={inputStyle} />

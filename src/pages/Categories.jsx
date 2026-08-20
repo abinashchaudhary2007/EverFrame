@@ -38,7 +38,7 @@ export default function Categories() {
       </div>
 
       <div className="container section">
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px' }}>
+        <div className="categories-grid">
           {cats.map(cat => {
             const count = productsList.filter(p => p.category === cat.id).length;
             return (

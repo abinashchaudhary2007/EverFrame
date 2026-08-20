@@ -943,7 +943,7 @@ export default function Admin() {
                     : `from recorded offline sales`;
 
                   return (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '32px' }}>
+                    <div className="admin-stats-grid">
                       {[
                         {
                           label: overviewChannelFilter === 'all' ? 'Total Revenue' : overviewChannelFilter === 'online' ? 'Online Revenue' : 'Offline Revenue',
