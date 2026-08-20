@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, Package, Heart, MapPin, LogOut } from 'lucide-react';
+import { User, Package, Heart, MapPin, LogOut, Download, Loader2 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { useWishlist } from '../context/WishlistContext';
 import { useAuth } from '../context/AuthContext';
 import ProductCard from '../components/product/ProductCard';
 import { getUserOrders } from '../services/api';
 import CopyButton from '../components/ui/CopyButton';
+import { downloadInvoicePDF } from '../utils/invoiceDownload';
 
 export default function Account() {
   const navigate = useNavigate();
@@ -14,6 +16,7 @@ export default function Account() {
   const [tab, setTab] = useState('profile');
   const [userOrders, setUserOrders] = useState([]);
   const [loadingOrders, setLoadingOrders] = useState(true);
+  const [downloadingId, setDownloadingId] = useState(null);
 
   const fetchOrders = () => {
     if (user?.email) {
@@ -191,8 +194,50 @@ export default function Account() {
                             </div>
                           )}
 
-                          <div style={{ marginTop: '14px', textAlign: 'right' }}>
-                            <Link to={`/track-order?id=${orderNum}`} className="btn btn-outline btn-sm" style={{ fontSize: '12px', padding: '6px 14px' }}>
+                          <div style={{ marginTop: '14px', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                            <button
+                              type="button"
+                              className="btn btn-outline btn-sm"
+                              disabled={downloadingId === orderNum}
+                              onClick={async () => {
+                                try {
+                                  setDownloadingId(orderNum);
+                                  toast.loading('Downloading invoice...', { id: `acc-dl-${orderNum}` });
+                                  await downloadInvoicePDF({
+                                    orderNumber: orderNum,
+                                    placedAt: order.created_at || order.date,
+                                    name: order.customer_name || user?.name || 'Customer',
+                                    email: order.customer_email || user?.email,
+                                    phone: order.customer_phone,
+                                    address: order.address || order.shipping_address,
+                                    city: order.city,
+                                    paymentMethod: order.payment_method,
+                                    items: (order.order_items || order.items || []).map(it => ({
+                                      name: it.product_name || it.name,
+                                      price: it.price,
+                                      quantity: it.quantity,
+                                      variant: it.variant
+                                    })),
+                                    subtotal: order.subtotal || order.total,
+                                    deliveryCharge: order.delivery_charge || 0,
+                                    discountAmount: order.discount_amount || 0,
+                                    couponCode: order.coupon_code || '',
+                                    total: order.total
+                                  });
+                                  toast.success('Invoice downloaded! 📄', { id: `acc-dl-${orderNum}` });
+                                } catch (err) {
+                                  console.error(err);
+                                  toast.error('Could not download invoice', { id: `acc-dl-${orderNum}` });
+                                } finally {
+                                  setDownloadingId(null);
+                                }
+                              }}
+                              style={{ fontSize: '12px', padding: '6px 14px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                            >
+                              {downloadingId === orderNum ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
+                              <span>Download Bill</span>
+                            </button>
+                            <Link to={`/track-order?id=${orderNum}`} className="btn btn-primary btn-sm" style={{ fontSize: '12px', padding: '6px 14px' }}>
                               Track Package →
                             </Link>
                           </div>

@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Search, Package } from 'lucide-react';
+import { Search, Package, Download, Loader2 } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { getOrderByNumber } from '../services/api';
 import CopyButton from '../components/ui/CopyButton';
+import { downloadInvoicePDF } from '../utils/invoiceDownload';
 
 const STATUS_STEPS = ['Order Placed', 'Confirmed', 'Preparing', 'Shipped', 'Delivered'];
 
@@ -12,6 +14,7 @@ export default function TrackOrder() {
   const [tracked, setTracked] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   // Auto-track if id comes from URL query param or when status is updated
   useEffect(() => {
@@ -125,6 +128,53 @@ export default function TrackOrder() {
           {tracked && (
             <div>
               {/* Order Summary Info */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <div style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--color-text-muted)' }}>
+                  Order Details
+                </div>
+                <button
+                  className="btn btn-outline btn-sm"
+                  disabled={downloading}
+                  onClick={async () => {
+                    try {
+                      setDownloading(true);
+                      toast.loading('Downloading invoice...', { id: 'track-dl' });
+                      await downloadInvoicePDF({
+                        orderNumber: tracked.order_number,
+                        placedAt: tracked.created_at,
+                        name: tracked.customer_name,
+                        email: tracked.customer_email,
+                        phone: tracked.customer_phone,
+                        address: tracked.address || tracked.shipping_address,
+                        city: tracked.city,
+                        paymentMethod: tracked.payment_method,
+                        items: (tracked.order_items || []).map(it => ({
+                          name: it.product_name || it.name,
+                          price: it.price,
+                          quantity: it.quantity,
+                          variant: it.variant
+                        })),
+                        subtotal: tracked.subtotal || tracked.total,
+                        deliveryCharge: tracked.delivery_charge || 0,
+                        discountAmount: tracked.discount_amount || 0,
+                        couponCode: tracked.coupon_code || '',
+                        total: tracked.total
+                      });
+                      toast.success('Invoice downloaded! 📄', { id: 'track-dl' });
+                    } catch (err) {
+                      console.error(err);
+                      toast.error('Could not download invoice', { id: 'track-dl' });
+                    } finally {
+                      setDownloading(false);
+                    }
+                  }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 14px', fontSize: '12.5px' }}
+                >
+                  {downloading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+                  <span>Download Bill</span>
+                </button>
+              </div>
+
               <div style={{ background: 'var(--color-surface)', borderRadius: '12px', padding: '20px', marginBottom: '32px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', border: '1px solid var(--color-border-light)' }}>
                 {[
                   ['Order Number', <span key="ord" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>#{tracked.order_number} <CopyButton text={tracked.order_number} /></span>],

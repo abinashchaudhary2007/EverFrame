@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { CheckCircle, Tag, X, MapPin, ShieldCheck, Package, Truck, AlertCircle, Sparkles, ArrowRight } from 'lucide-react';
+import { CheckCircle, Tag, X, MapPin, ShieldCheck, Package, Truck, AlertCircle, Sparkles, Download, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import confetti from 'canvas-confetti';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
-import CopyButton from '../components/ui/CopyButton';
 import { createOrder, validateCoupon, incrementCouponUsage } from '../services/api';
+import { downloadInvoicePDF } from '../utils/invoiceDownload';
 
 const PAYMENT_METHODS = [
   { id: 'cod', label: 'Cash on Delivery', icon: '💵', desc: 'Pay when your frame arrives', recommended: true },
@@ -100,6 +100,7 @@ export default function Checkout() {
   const [paymentMethod, setPaymentMethod] = useState('cod');
   const [placed, setPlaced] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [placedOrderNum, setPlacedOrderNum] = useState('');
 
   const [form, setForm] = useState({
@@ -524,10 +525,34 @@ export default function Checkout() {
             <Link to="/track-order" className="btn btn-outline" style={{ flex: 1, textAlign: 'center' }}>📦 Track Order</Link>
             <button
               className="btn btn-primary"
-              onClick={handlePrint}
-              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+              disabled={downloading}
+              onClick={async () => {
+                try {
+                  setDownloading(true);
+                  toast.loading('Downloading invoice...', { id: 'invoice-dl' });
+                  await downloadInvoicePDF(od);
+                  toast.success('Invoice downloaded! 📄', { id: 'invoice-dl' });
+                } catch (err) {
+                  console.error(err);
+                  toast.error('Download issue, opening print view...', { id: 'invoice-dl' });
+                  handlePrint();
+                } finally {
+                  setDownloading(false);
+                }
+              }}
+              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
             >
-              🖨️ Print Bill
+              {downloading ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" />
+                  <span>Downloading...</span>
+                </>
+              ) : (
+                <>
+                  <Download size={16} />
+                  <span>Download Bill</span>
+                </>
+              )}
             </button>
           </div>
         </div>
