@@ -77,9 +77,9 @@ export default function Login() {
         {/* Email Verification Banner */}
         {showVerificationBanner && (
           <div style={{
-            background: '#FFF7ED', border: '1px solid #FDBA74', borderRadius: '10px',
+            background: 'rgba(234, 88, 12, 0.12)', border: '1px solid rgba(234, 88, 12, 0.35)', borderRadius: '10px',
             padding: '14px 16px', marginBottom: '20px', fontSize: '13.5px', lineHeight: '1.6',
-            color: '#9A3412'
+            color: 'var(--color-dark)'
           }}>
             <strong>📧 Email not verified.</strong> Please check your inbox (and spam folder) for a confirmation link.
             <button
@@ -104,7 +104,7 @@ export default function Login() {
               }}
               style={{
                 display: 'block', marginTop: '10px', background: 'none', border: 'none',
-                color: '#2563EB', fontWeight: 600, cursor: resending ? 'not-allowed' : 'pointer',
+                color: 'var(--color-blue)', fontWeight: 600, cursor: resending ? 'not-allowed' : 'pointer',
                 padding: 0, fontSize: '13.5px', textDecoration: 'underline',
                 opacity: resending ? 0.6 : 1,
               }}
@@ -128,7 +128,7 @@ export default function Login() {
             padding: '12px 16px',
             borderRadius: '10px',
             border: '1.5px solid var(--color-border)',
-            background: '#fff',
+            background: 'var(--color-surface)',
             color: 'var(--color-dark)',
             fontWeight: 600,
             fontSize: '14.5px',

@@ -115,7 +115,7 @@ export default function Signup() {
             padding: '12px 16px',
             borderRadius: '10px',
             border: '1.5px solid var(--color-border)',
-            background: '#fff',
+            background: 'var(--color-surface)',
             color: 'var(--color-dark)',
             fontWeight: 600,
             fontSize: '14.5px',

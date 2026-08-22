@@ -4117,14 +4117,22 @@ ul, ol {
   border-color: #3B82F6 !important;
 }
 
-/* ── Product Detail Reviews & Tabs Dark Mode ── */
+/* ── Product Detail Reviews & Comments Dark Mode ── */
+[data-theme="dark"] #reviews-section {
+  border-top-color: #1E2842 !important;
+}
+
 [data-theme="dark"] .product-review-card,
-[data-theme="dark"] [style*="borderRadius: '14px'"][style*="padding: '22px'"] {
+[data-theme="dark"] .customer-comment-card,
+[data-theme="dark"] .review-summary-card,
+[data-theme="dark"] .review-form-card,
+[data-theme="dark"] .review-cta-card {
   background-color: #13192B !important;
   border-color: #263352 !important;
 }
-[data-theme="dark"] .product-review-card p,
-[data-theme="dark"] [style*="whiteSpace: 'pre-wrap'"] {
+
+[data-theme="dark"] .customer-comment-card p,
+[data-theme="dark"] .product-review-card p {
   color: #E2E8F0 !important;
 }
 

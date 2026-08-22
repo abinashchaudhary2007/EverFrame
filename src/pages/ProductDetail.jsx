@@ -343,7 +343,7 @@ export default function ProductDetail() {
           {/* Rating Summary Card & Form Grid */}
           <div className="reviews-summary-grid">
             {/* Rating breakdown box */}
-            <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border-light)', borderRadius: '16px', padding: '24px' }}>
+            <div className="review-summary-card" style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border-light)', borderRadius: '16px', padding: '24px' }}>
               <div style={{ textAlign: 'center', paddingBottom: '20px', borderBottom: '1px solid var(--color-border-light)' }}>
                 <div style={{ fontSize: '44px', fontWeight: 900, color: 'var(--color-primary-navy)', lineHeight: 1 }}>{avgRating}</div>
                 <div style={{ display: 'flex', justifyContent: 'center', gap: '4px', margin: '8px 0' }}>
@@ -352,7 +352,7 @@ export default function ProductDetail() {
                       key={s}
                       size={18}
                       fill={s <= Math.round(parseFloat(avgRating)) ? '#f59e0b' : 'none'}
-                      color={s <= Math.round(parseFloat(avgRating)) ? '#f59e0b' : '#d1d5db'}
+                      color={s <= Math.round(parseFloat(avgRating)) ? '#f59e0b' : 'var(--color-border)'}
                     />
                   ))}
                 </div>
@@ -366,7 +366,7 @@ export default function ProductDetail() {
                 {starCounts.map(({ stars, count, pct }) => (
                   <div key={stars} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '12.5px' }}>
                     <span style={{ width: '40px', fontWeight: 600, color: 'var(--color-dark)' }}>{stars} ★</span>
-                    <div style={{ flex: 1, height: '7px', background: 'rgba(0,0,0,0.06)', borderRadius: '10px', overflow: 'hidden' }}>
+                    <div style={{ flex: 1, height: '7px', background: 'var(--color-border)', borderRadius: '10px', overflow: 'hidden' }}>
                       <div style={{ width: `${pct}%`, height: '100%', background: '#f59e0b', borderRadius: '10px', transition: 'width 0.4s ease' }} />
                     </div>
                     <span style={{ width: '32px', textAlign: 'right', color: 'var(--color-text-muted)', fontSize: '11.5px' }}>{count}</span>
@@ -378,7 +378,7 @@ export default function ProductDetail() {
             {/* Write Review Form or Prompt */}
             <div>
               {showReviewForm ? (
-                <div style={{ background: '#fff', border: '1.5px solid var(--color-blue)', borderRadius: '16px', padding: '28px', boxShadow: '0 8px 24px rgba(23,42,114,0.08)' }}>
+                <div className="review-form-card" style={{ background: 'var(--color-surface)', border: '1.5px solid var(--color-blue)', borderRadius: '16px', padding: '28px', boxShadow: 'var(--shadow-md)' }}>
                   <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '19px', fontWeight: 700, color: 'var(--color-primary-navy)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Sparkles size={18} color="var(--color-blue)" /> Share Your Experience
                   </h3>
@@ -404,7 +404,7 @@ export default function ProductDetail() {
                               <Star
                                 size={28}
                                 fill={active ? '#f59e0b' : 'none'}
-                                color={active ? '#f59e0b' : '#d1d5db'}
+                                color={active ? '#f59e0b' : 'var(--color-border)'}
                               />
                             </button>
                           );
@@ -473,7 +473,7 @@ export default function ProductDetail() {
                   </form>
                 </div>
               ) : (
-                <div style={{ background: 'var(--color-surface)', borderRadius: '16px', padding: '28px', border: '1px solid var(--color-border-light)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+                <div className="review-cta-card" style={{ background: 'var(--color-surface)', borderRadius: '16px', padding: '28px', border: '1px solid var(--color-border-light)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
                   <div>
                     <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', fontWeight: 700, color: 'var(--color-dark)', marginBottom: '4px' }}>
                       Have you ordered this frame?
@@ -501,7 +501,7 @@ export default function ProductDetail() {
                 {loadingReviews ? (
                   <p style={{ color: 'var(--color-text-muted)', fontSize: '14px', padding: '20px 0' }}>Loading reviews...</p>
                 ) : reviews.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '40px 20px', background: '#fff', borderRadius: '12px', border: '1px dashed var(--color-border)' }}>
+                  <div className="review-empty-card" style={{ textAlign: 'center', padding: '40px 20px', background: 'var(--color-surface)', borderRadius: '12px', border: '1px dashed var(--color-border)' }}>
                     <MessageSquare size={36} color="var(--color-text-muted)" style={{ margin: '0 auto 12px' }} />
                     <h4 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--color-dark)' }}>No reviews yet</h4>
                     <p style={{ color: 'var(--color-text-muted)', fontSize: '13.5px', marginTop: '4px', marginBottom: '16px' }}>
@@ -519,12 +519,13 @@ export default function ProductDetail() {
                       return (
                         <div
                           key={rev.id || idx}
+                          className="customer-comment-card"
                           style={{
-                            background: '#fff',
+                            background: 'var(--color-surface)',
                             borderRadius: '14px',
                             padding: '22px',
                             border: '1px solid var(--color-border-light)',
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+                            boxShadow: 'var(--shadow-sm)',
                             transition: 'border-color 0.2s'
                           }}
                         >
@@ -539,7 +540,7 @@ export default function ProductDetail() {
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                   <span style={{ fontWeight: 700, fontSize: '14.5px', color: 'var(--color-dark)' }}>{rev.user_name}</span>
                                   {rev.is_verified && (
-                                    <span style={{ fontSize: '11px', fontWeight: 700, background: '#eef9ee', color: '#16a34a', padding: '2px 8px', borderRadius: '12px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                    <span style={{ fontSize: '11px', fontWeight: 700, background: 'rgba(22, 163, 74, 0.15)', color: '#22c55e', padding: '2px 8px', borderRadius: '12px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
                                       <CheckCircle size={11} /> Verified Buyer
                                     </span>
                                   )}
@@ -552,7 +553,7 @@ export default function ProductDetail() {
                                         key={s}
                                         size={13}
                                         fill={s <= (rev.rating || 5) ? '#f59e0b' : 'none'}
-                                        color={s <= (rev.rating || 5) ? '#f59e0b' : '#d1d5db'}
+                                        color={s <= (rev.rating || 5) ? '#f59e0b' : 'var(--color-border)'}
                                       />
                                     ))}
                                   </div>
@@ -581,7 +582,7 @@ export default function ProductDetail() {
                             <button
                               onClick={() => handleToggleHelpful(rev.id || idx)}
                               style={{
-                                background: isLiked ? '#eef2ff' : 'none',
+                                background: isLiked ? 'rgba(33, 109, 178, 0.15)' : 'transparent',
                                 border: `1px solid ${isLiked ? 'var(--color-blue)' : 'var(--color-border)'}`,
                                 color: isLiked ? 'var(--color-blue)' : 'var(--color-text-muted)',
                                 borderRadius: '20px',

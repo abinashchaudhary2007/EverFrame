@@ -1618,7 +1618,7 @@ export default function Admin() {
 
                 {/* Filters toolbar */}
                 <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border-light)', borderRadius: '12px', padding: '16px', marginBottom: '20px', display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
-                  <div className="search-bar" style={{ flex: '1 1 220px', background: '#fff', padding: '7px 12px' }}>
+                  <div className="search-bar" style={{ flex: '1 1 220px', background: 'var(--color-white)', padding: '7px 12px' }}>
                     <Search size={14} color="var(--color-text-muted)" />
                     <input
                       type="text"
@@ -1630,7 +1630,7 @@ export default function Admin() {
                   </div>
                   <select
                     className="form-input"
-                    style={{ flex: '0 1 160px', fontSize: '13px', padding: '8px 10px', height: 'auto', background: '#fff' }}
+                    style={{ flex: '0 1 160px', fontSize: '13px', padding: '8px 10px', height: 'auto', background: 'var(--color-white)' }}
                     value={productCategoryFilter}
                     onChange={e => setProductCategoryFilter(e.target.value)}
                   >
@@ -1643,7 +1643,7 @@ export default function Admin() {
                   </select>
                   <select
                     className="form-input"
-                    style={{ flex: '0 1 140px', fontSize: '13px', padding: '8px 10px', height: 'auto', background: '#fff' }}
+                    style={{ flex: '0 1 140px', fontSize: '13px', padding: '8px 10px', height: 'auto', background: 'var(--color-white)' }}
                     value={productAvailFilter}
                     onChange={e => setProductAvailFilter(e.target.value)}
                   >
@@ -1653,7 +1653,7 @@ export default function Admin() {
                   </select>
                   <select
                     className="form-input"
-                    style={{ flex: '0 1 160px', fontSize: '13px', padding: '8px 10px', height: 'auto', background: '#fff' }}
+                    style={{ flex: '0 1 160px', fontSize: '13px', padding: '8px 10px', height: 'auto', background: 'var(--color-white)' }}
                     value={productSort}
                     onChange={e => setProductSort(e.target.value)}
                   >
@@ -1682,7 +1682,7 @@ export default function Admin() {
                     )}
                   </div>
                 ) : (
-                  <div style={{ overflowX: 'auto', borderRadius: '12px', border: '1px solid var(--color-border)', background: '#fff' }}>
+                  <div style={{ overflowX: 'auto', borderRadius: '12px', border: '1px solid var(--color-border)', background: 'var(--color-white)' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', minWidth: '850px' }}>
                       <thead>
                         <tr style={{ background: 'var(--color-surface)', textAlign: 'left', borderBottom: '1.5px solid var(--color-border)' }}>
