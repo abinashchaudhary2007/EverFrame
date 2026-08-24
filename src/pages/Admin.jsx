@@ -5,7 +5,7 @@ import {
   Plus, Search, Trash2, TrendingUp, LogOut, ShieldCheck, RefreshCw,
   ToggleLeft, ToggleRight, Zap, MessageSquare, MailOpen, Mail,
   Edit2, Eye, EyeOff, X, ImagePlus, Star, CheckCircle, AlertTriangle,
-  SlidersHorizontal, DollarSign, Calendar, Sun, Moon
+  SlidersHorizontal, DollarSign, Calendar, Sun, Moon, KeyRound, Lock, Shield, Check, Info, Server, Sparkles
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
@@ -13,6 +13,9 @@ import {
   getContactSubmissions, markContactRead, getAdminProducts, createProduct, updateProduct, deleteProduct,
   toggleProductAvailability, toggleProductFeatured, getOfflineSales, createOfflineSale, updateOfflineSale, deleteOfflineSale
 } from '../services/api';
+import {
+  verifyAdminLogin, changeAdminCredentials, getAdminProfile, clearAdminSession, isSessionValid
+} from '../services/adminAuth';
 import CopyButton from '../components/ui/CopyButton';
 import { useTheme } from '../context/ThemeContext';
 
@@ -21,12 +24,26 @@ import { useTheme } from '../context/ThemeContext';
 
 export default function Admin() {
   const { isDark, toggleTheme } = useTheme();
-  const [isAdminAuth, setIsAdminAuth] = useState(() => sessionStorage.getItem('everframe_admin_auth') === 'true');
+  const [isAdminAuth, setIsAdminAuth] = useState(() => isSessionValid());
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [loginError, setLoginError] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   const [tab, setTab] = useState('overview');
+
+  // Security / Credentials Management State
+  const [adminProfile, setAdminProfile] = useState({ email: '', updated_at: null, is_default: true });
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newAdminEmail, setNewAdminEmail] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrentPass, setShowCurrentPass] = useState(false);
+  const [showNewPass, setShowNewPass] = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
+  const [securityLoading, setSecurityLoading] = useState(false);
+  const [securityMsg, setSecurityMsg] = useState({ type: '', text: '' });
 
   // Product management state
   const [productList, setProductList] = useState([]);
@@ -160,7 +177,18 @@ export default function Admin() {
     }
   }, [isAdminAuth]);
 
-  // Load coupons/contacts/products/offline sales when tab is opened
+  // Load admin profile metadata
+  const loadAdminProfile = async () => {
+    try {
+      const profile = await getAdminProfile();
+      setAdminProfile(profile);
+      setNewAdminEmail(profile.email || '');
+    } catch (err) {
+      console.error('Error loading admin profile:', err);
+    }
+  };
+
+  // Load coupons/contacts/products/offline sales/security when tab is opened
   useEffect(() => {
     if (isAdminAuth && tab === 'coupons') {
       loadCoupons();
@@ -173,6 +201,9 @@ export default function Admin() {
     }
     if (isAdminAuth && tab === 'offline-sales') {
       loadOfflineSales();
+    }
+    if (isAdminAuth && tab === 'security') {
+      loadAdminProfile();
     }
   }, [isAdminAuth, tab]);
 
@@ -548,25 +579,90 @@ export default function Admin() {
     setCouponForm(f => ({ ...f, code: `EF${rand}` }));
   };
 
-  const handleAdminLogin = (e) => {
+  const handleAdminLogin = async (e) => {
     e.preventDefault();
-    if (loginEmail === 'admin@everframe.com' && loginPassword === 'admin123') {
-      sessionStorage.setItem('everframe_admin_auth', 'true');
-      setIsAdminAuth(true);
-      setLoginError('');
-      toast.success('Admin authenticated! 🔑', {
-        position: 'bottom-right',
-        style: { background: '#172A72', color: '#fff', borderRadius: '8px' },
-      });
-    } else {
-      setLoginError('Invalid admin email or password. Access denied.');
+    setLoginError('');
+    setIsLoggingIn(true);
+
+    try {
+      const result = await verifyAdminLogin(loginEmail, loginPassword);
+      if (result.success) {
+        setIsAdminAuth(true);
+        setLoginError('');
+        setLoginPassword('');
+        toast.success('Admin authenticated securely! 🔑', {
+          position: 'bottom-right',
+          style: { background: '#172A72', color: '#fff', borderRadius: '8px' },
+        });
+        loadAdminProfile();
+      } else {
+        setLoginError(result.error || 'Invalid admin email or password. Access denied.');
+      }
+    } catch {
+      setLoginError('Authentication error occurred. Please try again.');
+    } finally {
+      setIsLoggingIn(false);
     }
   };
 
   const handleAdminLogout = () => {
-    sessionStorage.removeItem('everframe_admin_auth');
+    clearAdminSession();
     setIsAdminAuth(false);
+    setLoginPassword('');
     toast('Logged out of Admin Portal', { position: 'bottom-right', style: { background: '#172A72', color: '#fff' } });
+  };
+
+  const handleUpdateCredentials = async (e) => {
+    e.preventDefault();
+    setSecurityMsg({ type: '', text: '' });
+
+    if (!currentPassword) {
+      setSecurityMsg({ type: 'error', text: 'Please enter your current password to authorize changes.' });
+      return;
+    }
+
+    if (!newAdminEmail || !newAdminEmail.trim()) {
+      setSecurityMsg({ type: 'error', text: 'Admin email cannot be empty.' });
+      return;
+    }
+
+    if (newPassword) {
+      if (newPassword.length < 6) {
+        setSecurityMsg({ type: 'error', text: 'New password must be at least 6 characters long.' });
+        return;
+      }
+      if (newPassword !== confirmPassword) {
+        setSecurityMsg({ type: 'error', text: 'New password and confirmation password do not match.' });
+        return;
+      }
+    }
+
+    setSecurityLoading(true);
+    try {
+      const res = await changeAdminCredentials({
+        currentPassword,
+        newEmail: newAdminEmail.trim(),
+        newPassword: newPassword || undefined,
+      });
+
+      if (res.success) {
+        setSecurityMsg({ type: 'success', text: res.message || 'Admin credentials updated successfully!' });
+        toast.success('Credentials updated securely! 🔒', {
+          position: 'bottom-right',
+          style: { background: '#172A72', color: '#fff', borderRadius: '8px' },
+        });
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+        loadAdminProfile();
+      } else {
+        setSecurityMsg({ type: 'error', text: res.error || 'Failed to update credentials.' });
+      }
+    } catch {
+      setSecurityMsg({ type: 'error', text: 'An unexpected error occurred while updating credentials.' });
+    } finally {
+      setSecurityLoading(false);
+    }
   };
 
   const handleStatusChange = async (targetOrder, newStatus) => {
@@ -690,14 +786,67 @@ export default function Admin() {
           <form onSubmit={handleAdminLogin}>
             <div className="form-group">
               <label className="form-label">Admin Email</label>
-              <input type="email" className="form-input" placeholder="admin@domain.com" value={loginEmail} onChange={e => setLoginEmail(e.target.value)} required />
+              <input
+                type="email"
+                className="form-input"
+                placeholder="admin@domain.com"
+                value={loginEmail}
+                onChange={e => setLoginEmail(e.target.value)}
+                required
+                disabled={isLoggingIn}
+              />
             </div>
             <div className="form-group">
               <label className="form-label">Admin Password</label>
-              <input type="password" className="form-input" placeholder="••••••••" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} required />
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showLoginPassword ? 'text' : 'password'}
+                  className="form-input"
+                  placeholder="••••••••"
+                  value={loginPassword}
+                  onChange={e => setLoginPassword(e.target.value)}
+                  required
+                  disabled={isLoggingIn}
+                  style={{ paddingRight: '40px' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowLoginPassword(!showLoginPassword)}
+                  style={{
+                    position: 'absolute',
+                    right: '10px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--color-text-muted)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: '4px',
+                  }}
+                  title={showLoginPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showLoginPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
             </div>
-            <button type="submit" className="btn btn-primary btn-full btn-lg" style={{ marginTop: '8px' }}>
-              <ShieldCheck size={18} /> Authenticate Admin
+            <button
+              type="submit"
+              className="btn btn-primary btn-full btn-lg"
+              style={{ marginTop: '8px' }}
+              disabled={isLoggingIn}
+            >
+              {isLoggingIn ? (
+                <>
+                  <span style={{ display: 'inline-block', width: '15px', height: '15px', border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite', marginRight: '8px' }} />
+                  Authenticating...
+                </>
+              ) : (
+                <>
+                  <ShieldCheck size={18} /> Authenticate Admin
+                </>
+              )}
             </button>
           </form>
         </div>
@@ -714,6 +863,7 @@ export default function Admin() {
     { id: 'customers', icon: Users, label: `Customers (${uniqueCustomers.length})`, shortLabel: `Customers (${uniqueCustomers.length})`, color: '#B94F8C', badgeBg: 'rgba(185, 79, 140, 0.12)' },
     { id: 'coupons', icon: Tag, label: 'Coupons', shortLabel: 'Coupons', color: '#D96B91', badgeBg: 'rgba(217, 107, 145, 0.12)' },
     { id: 'contacts', icon: MessageSquare, label: `Messages (${contactMessages.filter(m => !m.is_read).length} unread)`, shortLabel: `Messages (${contactMessages.filter(m => !m.is_read).length})`, color: '#0284c7', badgeBg: 'rgba(2, 132, 199, 0.12)' },
+    { id: 'security', icon: ShieldCheck, label: 'Security & Credentials', shortLabel: 'Security', color: '#0d9488', badgeBg: 'rgba(13, 148, 136, 0.12)' },
   ];
 
   return (
@@ -2151,6 +2301,391 @@ export default function Admin() {
                     ))}
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* SECURITY & CREDENTIALS TAB */}
+            {tab === 'security' && (
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
+                  <div>
+                    <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', fontWeight: 700, margin: 0 }}>Security & Credentials</h2>
+                    <p style={{ fontSize: '13px', color: 'var(--color-text-muted)', marginTop: '4px', margin: 0 }}>
+                      Manage admin access credentials, secure salted encryption, and session settings.
+                    </p>
+                  </div>
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <span style={{ fontSize: '12px', background: 'rgba(13, 148, 136, 0.12)', color: '#0d9488', padding: '4px 12px', borderRadius: '20px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                      <Shield size={13} /> SHA-256 Protected
+                    </span>
+                    <button className="btn btn-outline" onClick={loadAdminProfile} style={{ fontSize: '12px', padding: '6px 12px' }}>
+                      <RefreshCw size={14} /> Refresh
+                    </button>
+                  </div>
+                </div>
+
+                {/* Grid Layout: Account Overview + Credentials Form */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px', alignItems: 'start' }}>
+
+                  {/* Left Column: Account Profile & Security Status */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    <div style={{
+                      background: 'var(--color-surface)',
+                      border: '1px solid var(--color-border)',
+                      borderRadius: '16px',
+                      padding: '24px',
+                      boxShadow: 'var(--shadow-sm)'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
+                        <div style={{
+                          width: '54px',
+                          height: '54px',
+                          borderRadius: '14px',
+                          background: 'linear-gradient(135deg, #0d9488 0%, #172A72 100%)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: '#fff',
+                          boxShadow: '0 8px 20px rgba(13, 148, 136, 0.3)'
+                        }}>
+                          <ShieldCheck size={28} />
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '11px', fontWeight: 700, color: '#0d9488', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                            Admin Account
+                          </div>
+                          <div style={{ fontSize: '17px', fontWeight: 700, color: 'var(--color-dark)' }}>
+                            {adminProfile.email || 'admin@everframe.com'}
+                          </div>
+                          <div style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
+                            Full Portal Authority
+                          </div>
+                        </div>
+                      </div>
+
+                      {adminProfile.is_default && (
+                        <div style={{
+                          background: '#fffbeb',
+                          border: '1px solid #fde68a',
+                          borderRadius: '10px',
+                          padding: '12px 14px',
+                          marginBottom: '20px',
+                          fontSize: '13px',
+                          color: '#92400e',
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          gap: '10px',
+                          lineHeight: '1.5'
+                        }}>
+                          <AlertTriangle size={17} style={{ flexShrink: 0, marginTop: '2px', color: '#f59e0b' }} />
+                          <div>
+                            <strong>Default Credentials in use:</strong> For optimal security, we recommend updating your password to a unique, custom passphrase.
+                          </div>
+                        </div>
+                      )}
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--color-border-light)' }}>
+                          <span style={{ color: 'var(--color-text-muted)' }}>Authentication Model:</span>
+                          <span style={{ fontWeight: 600, color: 'var(--color-dark)' }}>Web Crypto SHA-256</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--color-border-light)' }}>
+                          <span style={{ color: 'var(--color-text-muted)' }}>Salt Generation:</span>
+                          <span style={{ fontWeight: 600, color: 'var(--color-dark)' }}>128-bit Cryptographic Salt</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--color-border-light)' }}>
+                          <span style={{ color: 'var(--color-text-muted)' }}>Last Credential Update:</span>
+                          <span style={{ fontWeight: 600, color: 'var(--color-dark)' }}>
+                            {adminProfile.updated_at ? new Date(adminProfile.updated_at).toLocaleString() : 'Initial Setup'}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0' }}>
+                          <span style={{ color: 'var(--color-text-muted)' }}>Database Sync:</span>
+                          <span style={{ fontWeight: 600, color: '#16a34a', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Check size={14} /> Active
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Active Session Card */}
+                    <div style={{
+                      background: 'var(--color-surface)',
+                      border: '1px solid var(--color-border)',
+                      borderRadius: '16px',
+                      padding: '22px',
+                      boxShadow: 'var(--shadow-sm)'
+                    }}>
+                      <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-dark)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Lock size={16} color="#0d9488" /> Active Admin Session
+                      </div>
+                      <p style={{ fontSize: '12.5px', color: 'var(--color-text-muted)', lineHeight: '1.5', marginBottom: '16px' }}>
+                        You are currently authenticated in this browser tab. Logging out terminates this session token.
+                      </p>
+                      <button
+                        type="button"
+                        className="btn btn-outline"
+                        onClick={handleAdminLogout}
+                        style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: '#E11D48', borderColor: '#FECDD3' }}
+                      >
+                        <LogOut size={15} /> End Active Admin Session
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Right Column: Update Credentials Form */}
+                  <div style={{
+                    background: 'var(--color-white)',
+                    border: '1px solid var(--color-border)',
+                    borderRadius: '16px',
+                    padding: '28px',
+                    boxShadow: 'var(--shadow-sm)'
+                  }}>
+                    <div style={{ marginBottom: '22px' }}>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', fontWeight: 700, color: '#0d9488', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '4px' }}>
+                        <KeyRound size={14} /> Credential Management
+                      </div>
+                      <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '19px', fontWeight: 700, color: 'var(--color-primary-navy)', margin: 0 }}>
+                        Change Admin Email & Password
+                      </h3>
+                      <p style={{ fontSize: '13px', color: 'var(--color-text-muted)', marginTop: '4px', margin: 0 }}>
+                        Provide your current password to verify identity before saving new login credentials.
+                      </p>
+                    </div>
+
+                    {/* Notification Banner */}
+                    {securityMsg.text && (
+                      <div style={{
+                        background: securityMsg.type === 'success' ? '#f0fdf4' : '#fff1f2',
+                        border: `1px solid ${securityMsg.type === 'success' ? '#bbf7d0' : '#fecdd3'}`,
+                        color: securityMsg.type === 'success' ? '#15803d' : '#E11D48',
+                        padding: '12px 16px',
+                        borderRadius: '10px',
+                        fontSize: '13px',
+                        marginBottom: '20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        lineHeight: '1.5'
+                      }}>
+                        {securityMsg.type === 'success' ? <CheckCircle size={16} /> : <AlertTriangle size={16} />}
+                        <span>{securityMsg.text}</span>
+                      </div>
+                    )}
+
+                    <form onSubmit={handleUpdateCredentials}>
+                      {/* Current Password Field */}
+                      <div className="form-group" style={{ marginBottom: '18px' }}>
+                        <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span>Current Password *</span>
+                          <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 400 }}>Required for verification</span>
+                        </label>
+                        <div style={{ position: 'relative' }}>
+                          <input
+                            type={showCurrentPass ? 'text' : 'password'}
+                            className="form-input"
+                            placeholder="Enter current admin password"
+                            value={currentPassword}
+                            onChange={e => setCurrentPassword(e.target.value)}
+                            required
+                            disabled={securityLoading}
+                            style={{ paddingRight: '40px' }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowCurrentPass(!showCurrentPass)}
+                            style={{
+                              position: 'absolute',
+                              right: '10px',
+                              top: '50%',
+                              transform: 'translateY(-50%)',
+                              background: 'none',
+                              border: 'none',
+                              color: 'var(--color-text-muted)',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              padding: '4px',
+                            }}
+                            title={showCurrentPass ? 'Hide password' : 'Show password'}
+                          >
+                            {showCurrentPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div style={{ height: '1px', background: 'var(--color-border-light)', margin: '20px 0' }} />
+
+                      {/* New Admin Email */}
+                      <div className="form-group" style={{ marginBottom: '18px' }}>
+                        <label className="form-label">New Admin Email</label>
+                        <input
+                          type="email"
+                          className="form-input"
+                          placeholder="admin@everframe.com"
+                          value={newAdminEmail}
+                          onChange={e => setNewAdminEmail(e.target.value)}
+                          required
+                          disabled={securityLoading}
+                        />
+                        <span style={{ fontSize: '11.5px', color: 'var(--color-text-muted)', marginTop: '4px', display: 'block' }}>
+                          You will use this email address to sign into the portal.
+                        </span>
+                      </div>
+
+                      {/* New Password */}
+                      <div className="form-group" style={{ marginBottom: '18px' }}>
+                        <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span>New Password</span>
+                          <span style={{ fontSize: '11.5px', color: 'var(--color-text-muted)', fontWeight: 400 }}>(Leave blank to keep unchanged)</span>
+                        </label>
+                        <div style={{ position: 'relative' }}>
+                          <input
+                            type={showNewPass ? 'text' : 'password'}
+                            className="form-input"
+                            placeholder="Enter new password (min. 6 chars)"
+                            value={newPassword}
+                            onChange={e => setNewPassword(e.target.value)}
+                            disabled={securityLoading}
+                            style={{ paddingRight: '40px' }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowNewPass(!showNewPass)}
+                            style={{
+                              position: 'absolute',
+                              right: '10px',
+                              top: '50%',
+                              transform: 'translateY(-50%)',
+                              background: 'none',
+                              border: 'none',
+                              color: 'var(--color-text-muted)',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              padding: '4px',
+                            }}
+                            title={showNewPass ? 'Hide password' : 'Show password'}
+                          >
+                            {showNewPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                          </button>
+                        </div>
+
+                        {/* Password strength meter */}
+                        {newPassword && (() => {
+                          let score = 0;
+                          if (newPassword.length >= 6) score += 1;
+                          if (newPassword.length >= 10) score += 1;
+                          if (/[A-Z]/.test(newPassword) && /[a-z]/.test(newPassword)) score += 1;
+                          if (/[0-9]/.test(newPassword) || /[^A-Za-z0-9]/.test(newPassword)) score += 1;
+
+                          const strengthInfo =
+                            score <= 1 ? { label: 'Weak', color: '#ef4444', width: '25%' } :
+                            score === 2 ? { label: 'Fair', color: '#f59e0b', width: '50%' } :
+                            score === 3 ? { label: 'Good', color: '#3b82f6', width: '75%' } :
+                            { label: 'Strong', color: '#10b981', width: '100%' };
+
+                          return (
+                            <div style={{ marginTop: '8px' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11.5px', marginBottom: '4px' }}>
+                                <span style={{ color: 'var(--color-text-muted)' }}>Strength:</span>
+                                <span style={{ fontWeight: 700, color: strengthInfo.color }}>{strengthInfo.label}</span>
+                              </div>
+                              <div style={{ height: '5px', background: 'var(--color-border)', borderRadius: '3px', overflow: 'hidden' }}>
+                                <div style={{ height: '100%', width: strengthInfo.width, background: strengthInfo.color, transition: 'all 0.3s ease' }} />
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </div>
+
+                      {/* Confirm New Password */}
+                      {newPassword && (
+                        <div className="form-group" style={{ marginBottom: '22px' }}>
+                          <label className="form-label">Confirm New Password *</label>
+                          <div style={{ position: 'relative' }}>
+                            <input
+                              type={showConfirmPass ? 'text' : 'password'}
+                              className="form-input"
+                              placeholder="Re-enter new password"
+                              value={confirmPassword}
+                              onChange={e => setConfirmPassword(e.target.value)}
+                              required={Boolean(newPassword)}
+                              disabled={securityLoading}
+                              style={{ paddingRight: '40px' }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowConfirmPass(!showConfirmPass)}
+                              style={{
+                                position: 'absolute',
+                                right: '10px',
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                                background: 'none',
+                                border: 'none',
+                                color: 'var(--color-text-muted)',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                padding: '4px',
+                              }}
+                              title={showConfirmPass ? 'Hide password' : 'Show password'}
+                            >
+                              {showConfirmPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                            </button>
+                          </div>
+
+                          {confirmPassword && (
+                            <div style={{ fontSize: '11.5px', marginTop: '5px', display: 'flex', alignItems: 'center', gap: '5px', color: newPassword === confirmPassword ? '#16a34a' : '#E11D48', fontWeight: 600 }}>
+                              {newPassword === confirmPassword ? (
+                                <><Check size={13} /> Passwords match</>
+                              ) : (
+                                <><X size={13} /> Passwords do not match</>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Action buttons */}
+                      <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+                        <button
+                          type="button"
+                          className="btn btn-outline"
+                          onClick={() => {
+                            setCurrentPassword('');
+                            setNewPassword('');
+                            setConfirmPassword('');
+                            setSecurityMsg({ type: '', text: '' });
+                          }}
+                          disabled={securityLoading}
+                          style={{ flex: 1 }}
+                        >
+                          Clear
+                        </button>
+                        <button
+                          type="submit"
+                          className="btn btn-primary"
+                          disabled={securityLoading}
+                          style={{ flex: 2, background: 'linear-gradient(135deg, #0d9488 0%, #172A72 100%)', borderColor: 'transparent' }}
+                        >
+                          {securityLoading ? (
+                            <>
+                              <span style={{ display: 'inline-block', width: '14px', height: '14px', border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite', marginRight: '8px' }} />
+                              Updating Credentials...
+                            </>
+                          ) : (
+                            <>
+                              <ShieldCheck size={16} /> Save New Credentials
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+
+                </div>
               </div>
             )}
 
