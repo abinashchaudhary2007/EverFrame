@@ -706,44 +706,72 @@ export default function Admin() {
   }
 
   // ADMIN DASHBOARD
+  const navTabs = [
+    { id: 'overview', icon: LayoutDashboard, label: 'Overview', shortLabel: 'Overview', color: '#216DB2', badgeBg: 'rgba(33, 109, 178, 0.12)' },
+    { id: 'orders', icon: ShoppingCart, label: `Live Orders (${orders.length})`, shortLabel: `Orders (${orders.length})`, color: '#3D3A86', badgeBg: 'rgba(61, 58, 134, 0.12)' },
+    { id: 'offline-sales', icon: Receipt, label: `Offline Sales (${offlineSales.length})`, shortLabel: `Offline (${offlineSales.length})`, color: '#16a34a', badgeBg: 'rgba(22, 163, 74, 0.12)' },
+    { id: 'products', icon: Package, label: `Products (${productList.length})`, shortLabel: `Products (${productList.length})`, color: '#68408D', badgeBg: 'rgba(104, 64, 141, 0.12)' },
+    { id: 'customers', icon: Users, label: `Customers (${uniqueCustomers.length})`, shortLabel: `Customers (${uniqueCustomers.length})`, color: '#B94F8C', badgeBg: 'rgba(185, 79, 140, 0.12)' },
+    { id: 'coupons', icon: Tag, label: 'Coupons', shortLabel: 'Coupons', color: '#D96B91', badgeBg: 'rgba(217, 107, 145, 0.12)' },
+    { id: 'contacts', icon: MessageSquare, label: `Messages (${contactMessages.filter(m => !m.is_read).length} unread)`, shortLabel: `Messages (${contactMessages.filter(m => !m.is_read).length})`, color: '#0284c7', badgeBg: 'rgba(2, 132, 199, 0.12)' },
+  ];
+
   return (
-    <div className="account-page page-enter">
-      <div className="container">
+    <div className="account-page account-page--admin page-enter">
+      <div className="admin-container">
         {/* Admin Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px', flexWrap: 'wrap', gap: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '14px' }}>
           <div>
-            <div className="section-label" style={{ marginBottom: '6px' }}>Management Portal</div>
-            <h1 className="section-heading">EverFrame Admin</h1>
+            <div className="section-label" style={{ marginBottom: '4px' }}>Management Portal</div>
+            <h1 className="section-heading" style={{ fontSize: 'clamp(24px, 3.5vw, 36px)', margin: 0 }}>EverFrame Admin</h1>
           </div>
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <button className="btn btn-primary" onClick={openAddProduct}>
-              <Plus size={16} /> Add Product
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+            <button className="btn btn-primary" onClick={openAddProduct} style={{ fontSize: '13px', padding: '9px 16px' }}>
+              <Plus size={15} /> Add Product
             </button>
-            <button className="btn btn-outline" onClick={() => { loadOrders(); loadOfflineSales(); }} title="Refresh data from database">
-              <RefreshCw size={16} /> Refresh
+            <button className="btn btn-outline" onClick={() => { loadOrders(); loadOfflineSales(); }} title="Refresh data from database" style={{ fontSize: '13px', padding: '9px 14px' }}>
+              <RefreshCw size={15} /> Refresh
             </button>
-            <button className="btn btn-outline" onClick={handleAdminLogout}>
-              <LogOut size={16} /> Logout
+            <button
+              className="btn btn-outline"
+              onClick={toggleTheme}
+              title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              style={{ fontSize: '13px', padding: '9px 12px', display: 'inline-flex', alignItems: 'center' }}
+            >
+              {isDark ? <Sun size={15} color="#f59e0b" /> : <Moon size={15} color="#68408D" />}
+            </button>
+            <button className="btn btn-outline" onClick={handleAdminLogout} style={{ fontSize: '13px', padding: '9px 14px' }}>
+              <LogOut size={15} /> Logout
             </button>
           </div>
         </div>
 
+        {/* Mobile / Tablet Horizontal Scrollable Tab Bar */}
+        <div className="admin-mobile-tab-nav">
+          {navTabs.map(item => {
+            const isActive = tab === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                className={`admin-mobile-tab-btn ${isActive ? 'active' : ''}`}
+                onClick={() => setTab(item.id)}
+              >
+                <item.icon size={15} color={isActive ? '#fff' : item.color} />
+                <span>{item.shortLabel}</span>
+              </button>
+            );
+          })}
+        </div>
+
         <div className="account-grid">
-          {/* Sidebar */}
-          <div className="account-sidebar">
+          {/* Desktop Sidebar */}
+          <div className="account-sidebar admin-desktop-sidebar">
             <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-blue)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '16px' }}>
               ADMIN MENU
             </div>
             <nav className="account-nav">
-              {[
-                { id: 'overview', icon: LayoutDashboard, label: 'Overview', color: '#216DB2', badgeBg: 'rgba(33, 109, 178, 0.12)' },
-                { id: 'orders', icon: ShoppingCart, label: `Live Orders (${orders.length})`, color: '#3D3A86', badgeBg: 'rgba(61, 58, 134, 0.12)' },
-                { id: 'offline-sales', icon: Receipt, label: `Offline Sales (${offlineSales.length})`, color: '#16a34a', badgeBg: 'rgba(22, 163, 74, 0.12)' },
-                { id: 'products', icon: Package, label: `Products (${productList.length})`, color: '#68408D', badgeBg: 'rgba(104, 64, 141, 0.12)' },
-                { id: 'customers', icon: Users, label: `Customers (${uniqueCustomers.length})`, color: '#B94F8C', badgeBg: 'rgba(185, 79, 140, 0.12)' },
-                { id: 'coupons', icon: Tag, label: 'Coupons', color: '#D96B91', badgeBg: 'rgba(217, 107, 145, 0.12)' },
-                { id: 'contacts', icon: MessageSquare, label: `Messages (${contactMessages.filter(m => !m.is_read).length} unread)`, color: '#0284c7', badgeBg: 'rgba(2, 132, 199, 0.12)' },
-              ].map(item => (
+              {navTabs.map(item => (
                 <a
                   key={item.id}
                   href="#"
@@ -790,7 +818,7 @@ export default function Admin() {
                     width: '100%',
                     display: 'flex',
                     alignItems: 'center',
-                    justify: 'space-between',
+                    justifyContent: 'space-between',
                     padding: '9px 12px',
                     borderRadius: '10px',
                     border: '1px solid var(--color-border)',
@@ -1176,13 +1204,13 @@ export default function Admin() {
                     return (
                       <div>
                         {/* Hero banner */}
-                        <div style={{ background: 'linear-gradient(135deg, #172A72 0%, #216DB2 50%, #3D3A86 100%)', borderRadius: '14px', padding: '20px 24px', color: '#fff', marginBottom: '12px', boxShadow: '0 8px 24px rgba(23,42,114,0.22)', display: 'flex', flexWrap: 'wrap', gap: '24px', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ background: 'linear-gradient(135deg, #172A72 0%, #216DB2 50%, #3D3A86 100%)', borderRadius: '14px', padding: '20px 24px', color: '#fff', marginBottom: '12px', boxShadow: '0 8px 24px rgba(23,42,114,0.22)', display: 'flex', flexWrap: 'wrap', gap: '20px', alignItems: 'center', justifyContent: 'space-between' }}>
                           <div>
                             <div style={{ fontSize: '11px', fontWeight: 800, color: '#93C5FD', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>💻 Online Sales Overview</div>
                             <div style={{ fontSize: '28px', fontWeight: 900, letterSpacing: '-0.02em' }}>NPR {totalOnlineRev.toLocaleString()}</div>
                             <div style={{ fontSize: '12.5px', color: '#E2E8F0', marginTop: '3px' }}>{orders.length} orders · Avg NPR {Math.round(avgOrder).toLocaleString()}</div>
                           </div>
-                          <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+                          <div className="admin-hero-counters">
                             <div style={{ textAlign: 'center' }}><div style={{ fontSize: '20px', fontWeight: 800, color: '#FCD34D' }}>{orders.filter(o=>o.order_status==='Order Placed').length}</div><div style={{ fontSize: '10px', color: '#93C5FD', fontWeight: 700 }}>PENDING</div></div>
                             <div style={{ textAlign: 'center' }}><div style={{ fontSize: '20px', fontWeight: 800, color: '#4ADE80' }}>{orders.filter(o=>o.order_status==='Delivered').length}</div><div style={{ fontSize: '10px', color: '#93C5FD', fontWeight: 700 }}>DELIVERED</div></div>
                             <div style={{ textAlign: 'center' }}><div style={{ fontSize: '20px', fontWeight: 800, color: '#F472B6' }}>NPR {totalDelivery.toLocaleString()}</div><div style={{ fontSize: '10px', color: '#93C5FD', fontWeight: 700 }}>DELIVERY FEES</div></div>
@@ -1190,7 +1218,7 @@ export default function Admin() {
                           </div>
                         </div>
                         {/* Status cards row */}
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: '10px', marginBottom: '12px' }}>
+                        <div className="admin-status-cards-grid">
                           {statusCounts.map(({ st, count }) => (
                             <div key={st} className="admin-stat-card" style={{ borderRadius: '10px', padding: '12px 10px', border: `1.5px solid ${orderStatusFilter === st ? (statusColor[st] || '#216DB2') : 'var(--color-border-light)'}`, textAlign: 'center', cursor: 'pointer', transition: 'all 0.18s' }} onClick={() => setOrderStatusFilter(st)}>
                               <div style={{ fontSize: '22px', fontWeight: 900, color: statusColor[st] || '#216DB2' }}>{count}</div>
@@ -1350,20 +1378,20 @@ export default function Admin() {
                     const catColors    = ['#216DB2','#3D3A86','#68408D','#B94F8C','#16a34a','#0284c7'];
                     return (
                       <div>
-                        <div style={{ background: 'linear-gradient(135deg, #172A72 0%, #3D3A86 45%, #68408D 100%)', borderRadius: '14px', padding: '20px 24px', color: '#fff', marginBottom: '12px', boxShadow: '0 8px 24px rgba(61,58,134,0.22)', display: 'flex', flexWrap: 'wrap', gap: '24px', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ background: 'linear-gradient(135deg, #172A72 0%, #3D3A86 45%, #68408D 100%)', borderRadius: '14px', padding: '20px 24px', color: '#fff', marginBottom: '12px', boxShadow: '0 8px 24px rgba(61,58,134,0.22)', display: 'flex', flexWrap: 'wrap', gap: '20px', alignItems: 'center', justifyContent: 'space-between' }}>
                           <div>
                             <div style={{ fontSize: '11px', fontWeight: 800, color: '#93C5FD', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>🧾 Offline Sales Overview</div>
                             <div style={{ fontSize: '28px', fontWeight: 900, letterSpacing: '-0.02em' }}>NPR {totalRev.toLocaleString()}</div>
                             <div style={{ fontSize: '12.5px', color: '#E2E8F0', marginTop: '3px' }}>{offlineSales.length} sale{offlineSales.length!==1?'s':''} · Avg NPR {Math.round(avgSold).toLocaleString()}</div>
                           </div>
-                          <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+                          <div className="admin-hero-counters">
                             <div style={{ textAlign: 'center' }}><div style={{ fontSize: '20px', fontWeight: 800, color: '#4ADE80' }}>NPR {totalProfit.toLocaleString()}</div><div style={{ fontSize: '10px', color: '#93C5FD', fontWeight: 700 }}>NET PROFIT</div></div>
                             <div style={{ textAlign: 'center' }}><div style={{ fontSize: '20px', fontWeight: 800, color: '#FCD34D' }}>{profitMargin}%</div><div style={{ fontSize: '10px', color: '#93C5FD', fontWeight: 700 }}>MARGIN</div></div>
                             <div style={{ textAlign: 'center' }}><div style={{ fontSize: '20px', fontWeight: 800, color: '#F472B6' }}>NPR {todayRev.toLocaleString()}</div><div style={{ fontSize: '10px', color: '#93C5FD', fontWeight: 700 }}>TODAY</div></div>
                             <div style={{ textAlign: 'center' }}><div style={{ fontSize: '20px', fontWeight: 800, color: '#A5F3FC' }}>NPR {monthRev.toLocaleString()}</div><div style={{ fontSize: '10px', color: '#93C5FD', fontWeight: 700 }}>THIS MONTH</div></div>
                           </div>
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', gap: '10px', marginBottom: '12px' }}>
+                        <div className="admin-offline-stats-grid">
                           {[
                             { label: 'Total Revenue', val: `NPR ${totalRev.toLocaleString()}`,    color: '#216DB2', icon: '💰' },
                             { label: 'Total Cost',    val: `NPR ${totalCost.toLocaleString()}`,   color: '#B94F8C', icon: '📦' },
@@ -1395,9 +1423,9 @@ export default function Admin() {
 
                 {/* ── SALES LIST ── */}
                 <div style={{ paddingTop: '8px' }}>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '14px', marginBottom: '24px', background: 'var(--color-surface)', padding: '16px', borderRadius: '12px', border: '1px solid var(--color-border-light)', alignItems: 'center' }}>
+                  <div className="admin-filter-bar">
                     {/* Search */}
-                    <div style={{ flex: '1 1 220px', position: 'relative' }}>
+                    <div style={{ flex: '1 1 200px', position: 'relative' }}>
                       <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
                       <input
                         type="text"
@@ -1410,7 +1438,7 @@ export default function Admin() {
                     </div>
 
                     {/* Category Filter */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '0 1 auto' }}>
                       <Tag size={15} color="var(--color-text-muted)" />
                       <select
                         className="form-input"
@@ -1429,7 +1457,7 @@ export default function Admin() {
                     </div>
 
                     {/* Date Filter */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '0 1 auto' }}>
                       <Calendar size={15} color="var(--color-text-muted)" />
                       <select
                         className="form-input"
@@ -1447,7 +1475,7 @@ export default function Admin() {
 
                     {/* Custom Date Inputs */}
                     {offlineDateFilter === 'custom' && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                         <input
                           type="date"
                           className="form-input"
@@ -1469,7 +1497,7 @@ export default function Admin() {
                     )}
 
                     {/* Sorting */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <SlidersHorizontal size={15} color="var(--color-text-muted)" />
                       <select
                         className="form-input"
@@ -1504,19 +1532,19 @@ export default function Admin() {
                       </button>
                     </div>
                   ) : (
-                    <div style={{ overflowX: 'auto', border: '1px solid var(--color-border)', borderRadius: '12px', background: 'var(--color-white)' }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13.5px' }}>
+                    <div className="admin-table-container">
+                      <table style={{ width: '100%', minWidth: '820px' }}>
                         <thead>
-                          <tr style={{ background: 'var(--color-surface)', borderBottom: '1px solid var(--color-border)', color: 'var(--color-text-muted)', fontSize: '11.5px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                            <th style={{ padding: '12px 16px' }}>Date</th>
-                            <th style={{ padding: '12px 16px' }}>Customer</th>
-                            <th style={{ padding: '12px 16px' }}>Frame</th>
-                            <th style={{ padding: '12px 16px' }}>Category</th>
-                            <th style={{ padding: '12px 16px', textAlign: 'right' }}>Cost Price</th>
-                            <th style={{ padding: '12px 16px', textAlign: 'right' }}>Sold Price</th>
-                            <th style={{ padding: '12px 16px', textAlign: 'right' }}>Profit</th>
-                            <th style={{ padding: '12px 16px', textAlign: 'center' }}>Photo</th>
-                            <th style={{ padding: '12px 16px', textAlign: 'right' }}>Actions</th>
+                          <tr>
+                            <th style={{ minWidth: '95px' }}>Date</th>
+                            <th style={{ minWidth: '150px' }}>Customer</th>
+                            <th style={{ minWidth: '130px' }}>Frame</th>
+                            <th style={{ minWidth: '110px' }}>Category</th>
+                            <th style={{ minWidth: '85px', textAlign: 'right' }}>Cost Price</th>
+                            <th style={{ minWidth: '85px', textAlign: 'right' }}>Sold Price</th>
+                            <th style={{ minWidth: '85px', textAlign: 'right' }}>Profit</th>
+                            <th style={{ minWidth: '60px', textAlign: 'center' }}>Photo</th>
+                            <th style={{ minWidth: '140px', textAlign: 'right' }}>Actions</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1533,11 +1561,11 @@ export default function Admin() {
                             const catLabel = categoryMap[sale.category] || sale.category || 'Photo Frames';
 
                             return (
-                              <tr key={sale.id} className="admin-table-row" style={{ borderBottom: '1px solid var(--color-border-light)', transition: 'background 0.15s' }}>
-                                <td style={{ padding: '14px 16px', whiteSpace: 'nowrap', fontWeight: 600, color: 'var(--color-dark)' }}>
+                              <tr key={sale.id} className="admin-table-row">
+                                <td style={{ whiteSpace: 'nowrap', fontWeight: 600, color: 'var(--color-dark)' }}>
                                   {sale.order_date ? new Date(sale.order_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}
                                 </td>
-                                <td style={{ padding: '14px 16px', fontWeight: 700, color: 'var(--color-primary-navy)' }}>
+                                <td style={{ fontWeight: 700, color: 'var(--color-primary-navy)' }}>
                                   {sale.customer_name}
                                   {sale.notes && (
                                     <div style={{ fontSize: '11.5px', fontWeight: 400, color: 'var(--color-text-muted)', marginTop: '2px', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={sale.notes}>
@@ -1545,22 +1573,22 @@ export default function Admin() {
                                     </div>
                                   )}
                                 </td>
-                                <td style={{ padding: '14px 16px', fontWeight: 600 }}>{sale.frame_name}</td>
-                                <td style={{ padding: '14px 16px' }}>
+                                <td style={{ fontWeight: 600 }}>{sale.frame_name}</td>
+                                <td>
                                   <span style={{ fontSize: '11.5px', fontWeight: 700, background: '#f1f5f9', color: '#334155', padding: '3px 9px', borderRadius: '12px', whiteSpace: 'nowrap' }}>
                                     {catLabel}
                                   </span>
                                 </td>
-                                <td style={{ padding: '14px 16px', textAlign: 'right', color: 'var(--color-text-muted)' }}>
+                                <td style={{ textAlign: 'right', color: 'var(--color-text-muted)' }}>
                                   NPR {(parseFloat(sale.cost_price) || 0).toLocaleString()}
                                 </td>
-                                <td style={{ padding: '14px 16px', textAlign: 'right', fontWeight: 700, color: 'var(--color-dark)' }}>
+                                <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-dark)' }}>
                                   NPR {(parseFloat(sale.sold_price) || 0).toLocaleString()}
                                 </td>
-                                <td style={{ padding: '14px 16px', textAlign: 'right', fontWeight: 800, color: profitVal >= 0 ? '#16a34a' : '#dc2626' }}>
+                                <td style={{ textAlign: 'right', fontWeight: 800, color: profitVal >= 0 ? '#16a34a' : '#dc2626' }}>
                                   NPR {profitVal.toLocaleString()}
                                 </td>
-                                <td style={{ padding: '14px 16px', textAlign: 'center' }}>
+                                <td style={{ textAlign: 'center' }}>
                                   {sale.photo_url ? (
                                     <button
                                       type="button"
@@ -1574,7 +1602,7 @@ export default function Admin() {
                                     <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', background: 'var(--color-surface)', padding: '4px 8px', borderRadius: '6px' }}>No photo</span>
                                   )}
                                 </td>
-                                <td style={{ padding: '14px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                                <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                                   <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                                     <button className="btn btn-outline" style={{ padding: '4px 10px', fontSize: '12px' }} onClick={() => openEditOfflineSale(sale)}>
                                       <Edit2 size={13} /> Edit
@@ -1617,8 +1645,8 @@ export default function Admin() {
                 </div>
 
                 {/* Filters toolbar */}
-                <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border-light)', borderRadius: '12px', padding: '16px', marginBottom: '20px', display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
-                  <div className="search-bar" style={{ flex: '1 1 220px', background: 'var(--color-white)', padding: '7px 12px' }}>
+                <div className="admin-filter-bar">
+                  <div className="search-bar" style={{ flex: '1 1 200px', background: 'var(--color-white)', padding: '7px 12px' }}>
                     <Search size={14} color="var(--color-text-muted)" />
                     <input
                       type="text"
@@ -1630,7 +1658,7 @@ export default function Admin() {
                   </div>
                   <select
                     className="form-input"
-                    style={{ flex: '0 1 160px', fontSize: '13px', padding: '8px 10px', height: 'auto', background: 'var(--color-white)' }}
+                    style={{ flex: '0 1 150px', fontSize: '13px', padding: '8px 10px', height: 'auto', background: 'var(--color-white)' }}
                     value={productCategoryFilter}
                     onChange={e => setProductCategoryFilter(e.target.value)}
                   >
@@ -1643,7 +1671,7 @@ export default function Admin() {
                   </select>
                   <select
                     className="form-input"
-                    style={{ flex: '0 1 140px', fontSize: '13px', padding: '8px 10px', height: 'auto', background: 'var(--color-white)' }}
+                    style={{ flex: '0 1 130px', fontSize: '13px', padding: '8px 10px', height: 'auto', background: 'var(--color-white)' }}
                     value={productAvailFilter}
                     onChange={e => setProductAvailFilter(e.target.value)}
                   >
@@ -1653,7 +1681,7 @@ export default function Admin() {
                   </select>
                   <select
                     className="form-input"
-                    style={{ flex: '0 1 160px', fontSize: '13px', padding: '8px 10px', height: 'auto', background: 'var(--color-white)' }}
+                    style={{ flex: '0 1 150px', fontSize: '13px', padding: '8px 10px', height: 'auto', background: 'var(--color-white)' }}
                     value={productSort}
                     onChange={e => setProductSort(e.target.value)}
                   >
@@ -1682,25 +1710,25 @@ export default function Admin() {
                     )}
                   </div>
                 ) : (
-                  <div style={{ overflowX: 'auto', borderRadius: '12px', border: '1px solid var(--color-border)', background: 'var(--color-white)' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', minWidth: '850px' }}>
+                  <div className="admin-table-container">
+                    <table style={{ width: '100%', minWidth: '820px' }}>
                       <thead>
-                        <tr style={{ background: 'var(--color-surface)', textAlign: 'left', borderBottom: '1.5px solid var(--color-border)' }}>
-                          <th style={{ padding: '12px 14px', fontWeight: 700, fontSize: '11.5px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Product</th>
-                          <th style={{ padding: '12px 14px', fontWeight: 700, fontSize: '11.5px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Category</th>
-                          <th style={{ padding: '12px 14px', fontWeight: 700, fontSize: '11.5px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Price</th>
-                          <th style={{ padding: '12px 14px', fontWeight: 700, fontSize: '11.5px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Sizes</th>
-                          <th style={{ padding: '12px 14px', fontWeight: 700, fontSize: '11.5px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Status</th>
-                          <th style={{ padding: '12px 14px', fontWeight: 700, fontSize: '11.5px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Featured</th>
-                          <th style={{ padding: '12px 14px', fontWeight: 700, fontSize: '11.5px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Added</th>
-                          <th style={{ padding: '12px 14px', fontWeight: 700, fontSize: '11.5px', textTransform: 'uppercase', letterSpacing: '0.04em', textAlign: 'right' }}>Actions</th>
+                        <tr>
+                          <th style={{ minWidth: '180px' }}>Product</th>
+                          <th style={{ minWidth: '110px' }}>Category</th>
+                          <th style={{ minWidth: '90px' }}>Price</th>
+                          <th style={{ minWidth: '100px' }}>Sizes</th>
+                          <th style={{ minWidth: '100px' }}>Status</th>
+                          <th style={{ minWidth: '70px', textAlign: 'center' }}>Featured</th>
+                          <th style={{ minWidth: '90px' }}>Added</th>
+                          <th style={{ minWidth: '110px', textAlign: 'right' }}>Actions</th>
                         </tr>
                       </thead>
                       <tbody>
                         {adminFilteredProducts.map(p => (
-                          <tr key={p.id} style={{ borderBottom: '1px solid var(--color-border-light)', background: p.isAvailable ? 'var(--color-white)' : '#fafafa' }}>
+                          <tr key={p.id} style={{ background: p.isAvailable ? 'var(--color-white)' : '#fafafa' }}>
                             {/* Product image + name */}
-                            <td style={{ padding: '12px 14px' }}>
+                            <td>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                 <div style={{ width: '44px', height: '44px', borderRadius: '8px', overflow: 'hidden', flexShrink: 0, background: 'var(--color-surface)', border: '1px solid var(--color-border-light)' }}>
                                   {p.images?.[0] ? (
@@ -1720,9 +1748,9 @@ export default function Admin() {
                               </div>
                             </td>
                             {/* Category */}
-                            <td style={{ padding: '12px 14px', color: 'var(--color-text-muted)', fontSize: '12.5px' }}>{p.categoryLabel || p.category}</td>
+                            <td style={{ color: 'var(--color-text-muted)', fontSize: '12.5px' }}>{p.categoryLabel || p.category}</td>
                             {/* Price */}
-                            <td style={{ padding: '12px 14px' }}>
+                            <td>
                               <div style={{ fontWeight: 700, color: 'var(--color-primary-navy)' }}>NPR {p.price?.toLocaleString()}</div>
                               {p.originalPrice && (
                                 <div style={{ fontSize: '11.5px', color: 'var(--color-text-muted)', textDecoration: 'line-through' }}>
@@ -1731,11 +1759,11 @@ export default function Admin() {
                               )}
                             </td>
                             {/* Sizes */}
-                            <td style={{ padding: '12px 14px', color: 'var(--color-text-muted)', fontSize: '12px' }}>
+                            <td style={{ color: 'var(--color-text-muted)', fontSize: '12px' }}>
                               {(p.sizes || []).slice(0, 3).join(', ')}{p.sizes?.length > 3 ? '…' : ''}
                             </td>
                             {/* Availability / Status */}
-                            <td style={{ padding: '12px 14px' }}>
+                            <td>
                               <button
                                 onClick={() => handleToggleAvailability(p)}
                                 title={p.isAvailable ? 'Click to mark as Unavailable' : 'Click to mark as Available'}
@@ -1753,21 +1781,13 @@ export default function Admin() {
                                   gap: '5px',
                                   transition: 'all 0.2s ease',
                                 }}
-                                onMouseEnter={e => {
-                                  e.currentTarget.style.transform = 'scale(1.05)';
-                                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
-                                }}
-                                onMouseLeave={e => {
-                                  e.currentTarget.style.transform = 'scale(1)';
-                                  e.currentTarget.style.boxShadow = 'none';
-                                }}
                               >
                                 <span>{p.isAvailable ? '●' : '○'}</span>
                                 {p.isAvailable ? 'Available' : 'Unavailable'}
                               </button>
                             </td>
                             {/* Featured */}
-                            <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                            <td style={{ textAlign: 'center' }}>
                               <button
                                 onClick={() => handleToggleFeatured(p)}
                                 title={p.isFeatured ? 'Featured product (click to unfeature)' : 'Click to mark as Featured'}
@@ -1782,14 +1802,6 @@ export default function Admin() {
                                   justifyContent: 'center',
                                   transition: 'all 0.2s ease',
                                 }}
-                                onMouseEnter={e => {
-                                  e.currentTarget.style.transform = 'scale(1.1)';
-                                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(245, 158, 11, 0.25)';
-                                }}
-                                onMouseLeave={e => {
-                                  e.currentTarget.style.transform = 'scale(1)';
-                                  e.currentTarget.style.boxShadow = 'none';
-                                }}
                               >
                                 <Star
                                   size={16}
@@ -1799,11 +1811,11 @@ export default function Admin() {
                               </button>
                             </td>
                             {/* Created at */}
-                            <td style={{ padding: '12px 14px', color: 'var(--color-text-muted)', fontSize: '12px', whiteSpace: 'nowrap' }}>
+                            <td style={{ color: 'var(--color-text-muted)', fontSize: '12px', whiteSpace: 'nowrap' }}>
                               {p.created_at ? new Date(p.created_at).toLocaleDateString('en-NP', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
                             </td>
                             {/* Actions */}
-                            <td style={{ padding: '12px 14px', textAlign: 'right' }}>
+                            <td style={{ textAlign: 'right' }}>
                               <div style={{ display: 'flex', gap: '5px', justifyContent: 'flex-end', alignItems: 'center' }}>
                                 <button
                                   onClick={() => openEditProduct(p)}
@@ -1840,45 +1852,50 @@ export default function Admin() {
             {/* CUSTOMERS TAB — derived from real orders */}
             {tab === 'customers' && (
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                  <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', fontWeight: 700 }}>Customer Directory</h2>
-                  <span style={{ fontSize: '12px', background: '#eef9ee', color: '#16a34a', padding: '3px 10px', borderRadius: '20px', fontWeight: 700 }}>● Supabase</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '10px' }}>
+                  <div>
+                    <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', fontWeight: 700, margin: 0 }}>Customer Directory</h2>
+                    <p style={{ fontSize: '13px', color: 'var(--color-text-muted)', marginTop: '2px', margin: 0 }}>Verified customer contacts and order histories</p>
+                  </div>
+                  <span style={{ fontSize: '12px', background: '#eef9ee', color: '#16a34a', padding: '3px 10px', borderRadius: '20px', fontWeight: 700 }}>● Supabase Data</span>
                 </div>
                 {orders.length === 0 ? (
                   <p style={{ color: 'var(--color-text-muted)', fontSize: '14px', padding: '40px 0', textAlign: 'center' }}>No customer data yet. Customers will appear here after they place orders.</p>
                 ) : (
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13.5px' }}>
-                    <thead>
-                      <tr style={{ background: 'var(--color-surface)', textAlign: 'left', borderBottom: '1.5px solid var(--color-border)' }}>
-                        <th style={{ padding: '12px 14px', fontWeight: 700 }}>Name</th>
-                        <th style={{ padding: '12px 14px', fontWeight: 700 }}>Email</th>
-                        <th style={{ padding: '12px 14px', fontWeight: 700 }}>Phone</th>
-                        <th style={{ padding: '12px 14px', fontWeight: 700 }}>Orders</th>
-                        <th style={{ padding: '12px 14px', fontWeight: 700 }}>Total Spent</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {Object.values(
-                        orders.reduce((acc, o) => {
-                          const key = o.customer_email;
-                          if (!acc[key]) {
-                            acc[key] = { name: o.customer_name, email: o.customer_email, phone: o.customer_phone, orders: 0, totalSpent: 0 };
-                          }
-                          acc[key].orders++;
-                          acc[key].totalSpent += (o.total || 0);
-                          return acc;
-                        }, {})
-                      ).map((c, idx) => (
-                        <tr key={idx} style={{ borderBottom: '1px solid var(--color-border-light)' }}>
-                          <td style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--color-dark)' }}>{c.name}</td>
-                          <td style={{ padding: '12px 14px', color: 'var(--color-text-muted)' }}>{c.email}</td>
-                          <td style={{ padding: '12px 14px', color: 'var(--color-text-muted)' }}>{c.phone}</td>
-                          <td style={{ padding: '12px 14px', fontWeight: 600 }}>{c.orders}</td>
-                          <td style={{ padding: '12px 14px', fontWeight: 700, color: 'var(--color-primary-navy)' }}>NPR {c.totalSpent.toLocaleString()}</td>
+                  <div className="admin-table-container">
+                    <table style={{ width: '100%', minWidth: '680px' }}>
+                      <thead>
+                        <tr>
+                          <th style={{ minWidth: '140px' }}>Name</th>
+                          <th style={{ minWidth: '170px' }}>Email</th>
+                          <th style={{ minWidth: '120px' }}>Phone</th>
+                          <th style={{ minWidth: '70px' }}>Orders</th>
+                          <th style={{ minWidth: '110px', textAlign: 'right' }}>Total Spent</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {Object.values(
+                          orders.reduce((acc, o) => {
+                            const key = o.customer_email;
+                            if (!acc[key]) {
+                              acc[key] = { name: o.customer_name, email: o.customer_email, phone: o.customer_phone, orders: 0, totalSpent: 0 };
+                            }
+                            acc[key].orders++;
+                            acc[key].totalSpent += (o.total || 0);
+                            return acc;
+                          }, {})
+                        ).map((c, idx) => (
+                          <tr key={idx}>
+                            <td style={{ fontWeight: 600, color: 'var(--color-dark)' }}>{c.name}</td>
+                            <td style={{ color: 'var(--color-text-muted)' }}>{c.email}</td>
+                            <td style={{ color: 'var(--color-text-muted)' }}>{c.phone}</td>
+                            <td style={{ fontWeight: 600 }}>{c.orders}</td>
+                            <td style={{ fontWeight: 700, color: 'var(--color-primary-navy)', textAlign: 'right' }}>NPR {c.totalSpent.toLocaleString()}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 )}
               </div>
             )}
@@ -1963,17 +1980,17 @@ export default function Admin() {
                     <p>Create your first discount coupon above.</p>
                   </div>
                 ) : (
-                  <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13.5px' }}>
+                  <div className="admin-table-container">
+                    <table style={{ width: '100%', minWidth: '680px' }}>
                       <thead>
-                        <tr style={{ background: 'var(--color-surface)', textAlign: 'left', borderBottom: '1.5px solid var(--color-border)' }}>
-                          <th style={{ padding: '12px 14px', fontWeight: 700 }}>Code</th>
-                          <th style={{ padding: '12px 14px', fontWeight: 700 }}>Discount</th>
-                          <th style={{ padding: '12px 14px', fontWeight: 700 }}>Min Order</th>
-                          <th style={{ padding: '12px 14px', fontWeight: 700 }}>Usage</th>
-                          <th style={{ padding: '12px 14px', fontWeight: 700 }}>Expiry</th>
-                          <th style={{ padding: '12px 14px', fontWeight: 700 }}>Status</th>
-                          <th style={{ padding: '12px 14px', fontWeight: 700, textAlign: 'right' }}>Actions</th>
+                        <tr>
+                          <th style={{ minWidth: '120px' }}>Code</th>
+                          <th style={{ minWidth: '90px' }}>Discount</th>
+                          <th style={{ minWidth: '90px' }}>Min Order</th>
+                          <th style={{ minWidth: '80px' }}>Usage</th>
+                          <th style={{ minWidth: '95px' }}>Expiry</th>
+                          <th style={{ minWidth: '85px' }}>Status</th>
+                          <th style={{ minWidth: '85px', textAlign: 'right' }}>Actions</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1981,33 +1998,33 @@ export default function Admin() {
                           const isExpired = coupon.expires_at && new Date(coupon.expires_at) < new Date();
                           const isMaxed = coupon.max_uses !== null && coupon.usage_count >= coupon.max_uses;
                           return (
-                            <tr key={coupon.id} style={{ borderBottom: '1px solid var(--color-border-light)', opacity: (!coupon.is_active || isExpired || isMaxed) ? 0.65 : 1 }}>
-                              <td style={{ padding: '12px 14px' }}>
+                            <tr key={coupon.id} style={{ opacity: (!coupon.is_active || isExpired || isMaxed) ? 0.65 : 1 }}>
+                              <td>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
                                   <span style={{ fontFamily: 'monospace', fontWeight: 800, color: 'var(--color-primary-navy)', fontSize: '14px', letterSpacing: '0.05em' }}>{coupon.code}</span>
                                   <CopyButton text={coupon.code} />
                                 </div>
                               </td>
-                              <td style={{ padding: '12px 14px', fontWeight: 700, color: 'var(--color-blue)' }}>
+                              <td style={{ fontWeight: 700, color: 'var(--color-blue)' }}>
                                 {coupon.discount_type === 'percentage' ? `${coupon.discount_value}%` : `NPR ${coupon.discount_value}`}
                               </td>
-                              <td style={{ padding: '12px 14px', color: 'var(--color-text-muted)' }}>
+                              <td style={{ color: 'var(--color-text-muted)' }}>
                                 {coupon.min_order_amount > 0 ? `NPR ${coupon.min_order_amount.toLocaleString()}` : 'Any amount'}
                               </td>
-                              <td style={{ padding: '12px 14px', color: 'var(--color-text-muted)' }}>
+                              <td style={{ color: 'var(--color-text-muted)' }}>
                                 {coupon.usage_count}
                                 {coupon.max_uses !== null ? ` / ${coupon.max_uses}` : ' / ∞'}
                               </td>
-                              <td style={{ padding: '12px 14px', color: isExpired ? '#E11D48' : 'var(--color-text-muted)', fontSize: '12.5px' }}>
+                              <td style={{ color: isExpired ? '#E11D48' : 'var(--color-text-muted)', fontSize: '12.5px' }}>
                                 {coupon.expires_at ? new Date(coupon.expires_at).toLocaleDateString('en-NP', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
                                 {isExpired && <span style={{ marginLeft: '4px', fontSize: '10px', fontWeight: 700 }}>(Expired)</span>}
                               </td>
-                              <td style={{ padding: '12px 14px' }}>
+                              <td>
                                 <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '20px', background: coupon.is_active && !isExpired && !isMaxed ? '#dcfce7' : '#f5f5f5', color: coupon.is_active && !isExpired && !isMaxed ? '#16a34a' : '#888' }}>
                                   {isExpired ? 'Expired' : isMaxed ? 'Maxed' : coupon.is_active ? 'Active' : 'Inactive'}
                                 </span>
                               </td>
-                              <td style={{ padding: '12px 14px', textAlign: 'right' }}>
+                              <td style={{ textAlign: 'right' }}>
                                 <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
                                   <button
                                     onClick={() => handleToggleCoupon(coupon)}
@@ -2144,11 +2161,11 @@ export default function Admin() {
       {/* ── PRODUCT ADD/EDIT MODAL ───────────────────────────────── */}
       {showProductModal && (
         <div
-          style={{ position: 'fixed', inset: 0, background: 'rgba(10,14,30,0.55)', backdropFilter: 'blur(4px)', zIndex: 1000, overflowY: 'auto', padding: '24px 16px' }}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(10,14,30,0.55)', backdropFilter: 'blur(4px)', zIndex: 1000, overflowY: 'auto', padding: '16px' }}
           onClick={() => !productSaving && setShowProductModal(false)}
         >
           <div
-            style={{ background: 'var(--color-white)', borderRadius: '16px', maxWidth: '680px', margin: '0 auto', padding: '32px', boxShadow: '0 24px 64px rgba(0,0,0,0.22)', position: 'relative' }}
+            style={{ background: 'var(--color-white)', borderRadius: '16px', maxWidth: '680px', width: '100%', margin: '0 auto', padding: '24px 20px', boxShadow: '0 24px 64px rgba(0,0,0,0.22)', position: 'relative' }}
             onClick={e => e.stopPropagation()}
           >
             {/* Close btn */}
@@ -2409,7 +2426,7 @@ export default function Admin() {
         >
           <div
             className="admin-modal-anim"
-            style={{ background: 'var(--color-white)', borderRadius: '20px', padding: '32px', maxWidth: '580px', width: '100%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 24px 64px rgba(23,42,114,0.25)', border: '1px solid var(--color-border-light)' }}
+            style={{ background: 'var(--color-white)', borderRadius: '20px', padding: '24px 20px', maxWidth: '580px', width: '95%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 24px 64px rgba(23,42,114,0.25)', border: '1px solid var(--color-border-light)' }}
             onClick={e => e.stopPropagation()}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -2440,7 +2457,7 @@ export default function Admin() {
 
             <form onSubmit={handleSaveOfflineSale}>
               {/* Customer Name & Date */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px', marginBottom: '14px' }}>
                 <div className="form-group" style={{ margin: 0 }}>
                   <label className="form-label">Customer Name *</label>
                   <input
@@ -2465,7 +2482,7 @@ export default function Admin() {
               </div>
 
               {/* Frame Name & Category */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px', marginBottom: '14px' }}>
                 <div className="form-group" style={{ margin: 0 }}>
                   <label className="form-label">Frame Name *</label>
                   <input
@@ -2496,7 +2513,7 @@ export default function Admin() {
               </div>
 
               {/* Cost Price & Sold Price */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px', marginBottom: '14px' }}>
                 <div className="form-group" style={{ margin: 0 }}>
                   <label className="form-label">Cost Price (NPR) *</label>
                   <input
