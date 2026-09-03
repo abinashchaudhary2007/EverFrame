@@ -1153,8 +1153,10 @@ export async function getOfflineSales() {
 // Create a new offline sale
 export async function createOfflineSale(formData, imageFile = null) {
   const cost = parseFloat(formData.cost_price) || 0;
+  const delivery = parseFloat(formData.delivery_charge) || 0;
   const sold = parseFloat(formData.sold_price) || 0;
-  const profit = sold - cost;
+  const totalCost = cost + delivery;
+  const profit = sold - totalCost;
 
   let photoUrl = formData.photo_url || null;
   if (imageFile) {
@@ -1170,6 +1172,7 @@ export async function createOfflineSale(formData, imageFile = null) {
     frame_name: (formData.frame_name || '').trim(),
     category: (formData.category || 'photo-frames').trim(),
     cost_price: cost,
+    delivery_charge: delivery,
     sold_price: sold,
     profit: profit,
     photo_url: photoUrl,
@@ -1190,11 +1193,24 @@ export async function createOfflineSale(formData, imageFile = null) {
 
   if (isSupabaseConfigured && supabase) {
     try {
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from('offline_sales')
         .insert([payload])
         .select()
         .single();
+
+      // Gracefully retry without delivery_charge column if Supabase table hasn't had the column added yet
+      if (error && (error.message?.includes('delivery_charge') || error.code === '42703')) {
+        console.warn('delivery_charge column not found in Supabase offline_sales table. Retrying insert without delivery_charge. (Run the migration in Supabase SQL editor)');
+        const { delivery_charge: _, ...payloadWithoutDelivery } = payload;
+        const retry = await supabase
+          .from('offline_sales')
+          .insert([payloadWithoutDelivery])
+          .select()
+          .single();
+        data = retry.data;
+        error = retry.error;
+      }
 
       if (!error && data) {
         // Replace temporary local fallback with real Supabase record
@@ -1224,8 +1240,10 @@ export async function createOfflineSale(formData, imageFile = null) {
 // Update an existing offline sale
 export async function updateOfflineSale(id, formData, newImageFile = null) {
   const cost = parseFloat(formData.cost_price) || 0;
+  const delivery = parseFloat(formData.delivery_charge) || 0;
   const sold = parseFloat(formData.sold_price) || 0;
-  const profit = sold - cost;
+  const totalCost = cost + delivery;
+  const profit = sold - totalCost;
 
   let photoUrl = formData.photo_url || null;
   if (newImageFile) {
@@ -1241,6 +1259,7 @@ export async function updateOfflineSale(id, formData, newImageFile = null) {
     frame_name: (formData.frame_name || '').trim(),
     category: (formData.category || 'photo-frames').trim(),
     cost_price: cost,
+    delivery_charge: delivery,
     sold_price: sold,
     profit: profit,
     photo_url: photoUrl,
@@ -1259,12 +1278,26 @@ export async function updateOfflineSale(id, formData, newImageFile = null) {
 
   if (isSupabaseConfigured && supabase) {
     try {
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from('offline_sales')
         .update(updates)
         .eq('id', id)
         .select()
         .single();
+
+      // Gracefully retry without delivery_charge column if Supabase table hasn't had the column added yet
+      if (error && (error.message?.includes('delivery_charge') || error.code === '42703')) {
+        console.warn('delivery_charge column not found in Supabase offline_sales table. Retrying update without delivery_charge.');
+        const { delivery_charge: _, ...updatesWithoutDelivery } = updates;
+        const retry = await supabase
+          .from('offline_sales')
+          .update(updatesWithoutDelivery)
+          .eq('id', id)
+          .select()
+          .single();
+        data = retry.data;
+        error = retry.error;
+      }
 
       if (!error && data) {
         if (typeof window !== 'undefined') {

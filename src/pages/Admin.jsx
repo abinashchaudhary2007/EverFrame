@@ -116,6 +116,7 @@ export default function Admin() {
     frame_name: '',
     category: 'photo-frames',
     cost_price: '',
+    delivery_charge: '',
     sold_price: '',
     notes: '',
     photo_url: '',
@@ -228,6 +229,7 @@ export default function Admin() {
       frame_name: sale.frame_name || '',
       category: sale.category || 'photo-frames',
       cost_price: sale.cost_price !== undefined && sale.cost_price !== null ? sale.cost_price.toString() : '',
+      delivery_charge: sale.delivery_charge !== undefined && sale.delivery_charge !== null ? sale.delivery_charge.toString() : '',
       sold_price: sale.sold_price !== undefined && sale.sold_price !== null ? sale.sold_price.toString() : '',
       notes: sale.notes || '',
       photo_url: sale.photo_url || '',
@@ -270,6 +272,9 @@ export default function Admin() {
     if (!offlineForm.frame_name.trim()) return 'Frame Name is required.';
     if (offlineForm.cost_price === '' || isNaN(parseFloat(offlineForm.cost_price)) || parseFloat(offlineForm.cost_price) < 0) {
       return 'Cost Price must be a valid non-negative number.';
+    }
+    if (offlineForm.delivery_charge !== '' && (isNaN(parseFloat(offlineForm.delivery_charge)) || parseFloat(offlineForm.delivery_charge) < 0)) {
+      return 'Delivery Charge must be a valid non-negative number if provided.';
     }
     if (offlineForm.sold_price === '' || isNaN(parseFloat(offlineForm.sold_price)) || parseFloat(offlineForm.sold_price) < 0) {
       return 'Sold Price must be a valid non-negative number.';
@@ -702,10 +707,28 @@ export default function Admin() {
   const onlineRevenue = orders.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
   const offlineRevenue = offlineSales.reduce((sum, s) => sum + (parseFloat(s.sold_price) || 0), 0);
   const totalSales = onlineRevenue + offlineRevenue;
-  const totalOfflineProfit = offlineSales.reduce((sum, s) => sum + (parseFloat(s.profit) || 0), 0);
+  const calcOfflineProfit = s => (parseFloat(s.sold_price) || 0) - ((parseFloat(s.cost_price) || 0) + (parseFloat(s.delivery_charge) || 0));
+  const totalOfflineProfit = offlineSales.reduce((sum, s) => sum + calcOfflineProfit(s), 0);
   const uniqueCustomers = [...new Set(orders.map(o => o.customer_email).filter(Boolean))];
 
   // Filtered & sorted offline sales for Admin table
+  const isOfflineFiltered = offlineDateFilter !== 'all' || offlineCategoryFilter !== 'all' || offlineSearch.trim().length > 0;
+
+  const getOfflineDateFilterLabel = () => {
+    if (offlineDateFilter === 'today') return 'Today';
+    if (offlineDateFilter === 'yesterday') return 'Yesterday';
+    if (offlineDateFilter === 'week') return 'This Week (Last 7 Days)';
+    if (offlineDateFilter === 'month') return 'This Month';
+    if (offlineDateFilter === 'last30') return 'Last 30 Days';
+    if (offlineDateFilter === 'custom') {
+      if (offlineCustomStart && offlineCustomEnd) return `${offlineCustomStart} to ${offlineCustomEnd}`;
+      if (offlineCustomStart) return `From ${offlineCustomStart}`;
+      if (offlineCustomEnd) return `Up to ${offlineCustomEnd}`;
+      return 'Custom Range';
+    }
+    return 'All Dates';
+  };
+
   const filteredOfflineSales = offlineSales
     .filter(s => {
       const q = offlineSearch.trim().toLowerCase();
@@ -716,28 +739,41 @@ export default function Admin() {
       const matchCategory = offlineCategoryFilter === 'all' || s.category === offlineCategoryFilter;
 
       let matchDate = true;
-      if (offlineDateFilter !== 'all' && s.order_date) {
-        const saleDateStr = s.order_date;
-        const now = new Date();
-        now.setHours(0,0,0,0);
-        const todayStr = now.toISOString().split('T')[0];
+      if (offlineDateFilter !== 'all') {
+        if (!s.order_date) {
+          matchDate = false;
+        } else {
+          const now = new Date();
+          const pad = n => String(n).padStart(2, '0');
+          const todayStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 
-        if (offlineDateFilter === 'today') {
-          matchDate = saleDateStr === todayStr;
-        } else if (offlineDateFilter === 'week') {
-          const weekAgo = new Date(now);
-          weekAgo.setDate(weekAgo.getDate() - 7);
-          matchDate = new Date(saleDateStr) >= weekAgo;
-        } else if (offlineDateFilter === 'month') {
-          const monthAgo = new Date(now);
-          monthAgo.setMonth(monthAgo.getMonth() - 1);
-          matchDate = new Date(saleDateStr) >= monthAgo;
-        } else if (offlineDateFilter === 'custom') {
-          if (offlineCustomStart) {
-            matchDate = matchDate && s.order_date >= offlineCustomStart;
-          }
-          if (offlineCustomEnd) {
-            matchDate = matchDate && s.order_date <= offlineCustomEnd;
+          if (offlineDateFilter === 'today') {
+            matchDate = s.order_date === todayStr;
+          } else if (offlineDateFilter === 'yesterday') {
+            const yest = new Date(now);
+            yest.setDate(yest.getDate() - 1);
+            const yestStr = `${yest.getFullYear()}-${pad(yest.getMonth() + 1)}-${pad(yest.getDate())}`;
+            matchDate = s.order_date === yestStr;
+          } else if (offlineDateFilter === 'week') {
+            const weekAgo = new Date(now);
+            weekAgo.setDate(weekAgo.getDate() - 6);
+            const weekAgoStr = `${weekAgo.getFullYear()}-${pad(weekAgo.getMonth() + 1)}-${pad(weekAgo.getDate())}`;
+            matchDate = s.order_date >= weekAgoStr && s.order_date <= todayStr;
+          } else if (offlineDateFilter === 'month') {
+            const currentMonthPrefix = `${now.getFullYear()}-${pad(now.getMonth() + 1)}`;
+            matchDate = s.order_date.startsWith(currentMonthPrefix);
+          } else if (offlineDateFilter === 'last30') {
+            const monthAgo = new Date(now);
+            monthAgo.setDate(monthAgo.getDate() - 29);
+            const monthAgoStr = `${monthAgo.getFullYear()}-${pad(monthAgo.getMonth() + 1)}-${pad(monthAgo.getDate())}`;
+            matchDate = s.order_date >= monthAgoStr && s.order_date <= todayStr;
+          } else if (offlineDateFilter === 'custom') {
+            if (offlineCustomStart) {
+              matchDate = matchDate && s.order_date >= offlineCustomStart;
+            }
+            if (offlineCustomEnd) {
+              matchDate = matchDate && s.order_date <= offlineCustomEnd;
+            }
           }
         }
       }
@@ -751,7 +787,7 @@ export default function Admin() {
         return (parseFloat(b.sold_price) || 0) - (parseFloat(a.sold_price) || 0);
       }
       if (offlineSort === 'profit-desc') {
-        return (parseFloat(b.profit) || 0) - (parseFloat(a.profit) || 0);
+        return calcOfflineProfit(b) - calcOfflineProfit(a);
       }
       return new Date(b.order_date || b.created_at) - new Date(a.order_date || a.created_at);
     });
@@ -1407,6 +1443,10 @@ export default function Admin() {
 
                 {/* ── ORDERS LIST (normal page scroll) ── */}
                 <div style={{ paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  {/* Orders list count bar */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 4px', fontSize: '13px', fontWeight: 700, color: 'var(--color-dark)' }}>
+                    <span>Live Order Records ({filteredOrders.length}{filteredOrders.length !== orders.length ? ` of ${orders.length} total` : ''})</span>
+                  </div>
                   {loadingOrders ? (
                     <p style={{ color: 'var(--color-text-muted)', padding: '40px 0', textAlign: 'center' }}>Loading orders...</p>
                   ) : filteredOrders.length === 0 ? (
@@ -1417,13 +1457,16 @@ export default function Admin() {
                       <button className="btn btn-outline btn-sm" onClick={() => { setOrderStatusFilter('All'); setOrderSearchQuery(''); }}>Clear Filters</button>
                     </div>
                   ) : (
-                    filteredOrders.map(order => {
+                    filteredOrders.map((order, index) => {
                       const num = order.order_number || order.id;
                       return (
                         <div key={order.id || num} style={{ border: '1.5px solid var(--color-border)', borderRadius: '12px', padding: '20px', background: 'var(--color-white)', boxShadow: 'var(--shadow-card)' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '14px' }}>
                             <div>
                               <div style={{ fontSize: '16px', fontWeight: 800, color: 'var(--color-primary-navy)', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                <span style={{ fontSize: '11px', fontWeight: 800, background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '6px', padding: '2px 8px', color: 'var(--color-text-muted)' }}>
+                                  S.N. #{index + 1}
+                                </span>
                                 <span>Order #{num}</span>
                                 <CopyButton text={num} />
                                 <span style={{ fontSize: '11px', fontWeight: 700, color: '#fff', background: statusColor[order.order_status] || '#216DB2', padding: '3px 10px', borderRadius: '12px' }}>{order.order_status}</span>
@@ -1511,18 +1554,22 @@ export default function Admin() {
 
                   {/* Dashboard stats */}
                   {offlineSales.length > 0 && (() => {
-                    const totalRev     = offlineSales.reduce((s, x) => s + (parseFloat(x.sold_price) || 0), 0);
-                    const totalCost    = offlineSales.reduce((s, x) => s + (parseFloat(x.cost_price) || 0), 0);
-                    const totalProfit  = offlineSales.reduce((s, x) => s + (parseFloat(x.profit) || 0), 0);
-                    const avgSold      = offlineSales.length ? totalRev / offlineSales.length : 0;
+                    const displaySales = isOfflineFiltered ? filteredOfflineSales : offlineSales;
+                    const totalRev     = displaySales.reduce((s, x) => s + (parseFloat(x.sold_price) || 0), 0);
+                    const totalCost    = displaySales.reduce((s, x) => s + (parseFloat(x.cost_price) || 0) + (parseFloat(x.delivery_charge) || 0), 0);
+                    const totalProfit  = totalRev - totalCost;
+                    const avgSold      = displaySales.length ? totalRev / displaySales.length : 0;
                     const profitMargin = totalRev ? ((totalProfit / totalRev) * 100).toFixed(1) : 0;
                     const categoryMap  = { 'photo-frames':'Photo Frames','wedding-frames':'Wedding Frames','wall-art':'Wall Art','personalized-gifts':'Personalized Gifts','collage-frames':'Collage Frames','custom':'Custom / Other' };
-                    const catBreakdown = offlineSales.reduce((acc, s) => { const k = categoryMap[s.category]||s.category||'Other'; acc[k]=(acc[k]||0)+1; return acc; }, {});
+                    const catBreakdown = displaySales.reduce((acc, s) => { const k = categoryMap[s.category]||s.category||'Other'; acc[k]=(acc[k]||0)+1; return acc; }, {});
                     const topCat       = Object.entries(catBreakdown).sort((a,b)=>b[1]-a[1])[0];
-                    const todayStr     = new Date().toISOString().split('T')[0];
+                    const allTimeRev   = offlineSales.reduce((s, x) => s + (parseFloat(x.sold_price) || 0), 0);
+                    const now          = new Date();
+                    const pad          = n => String(n).padStart(2, '0');
+                    const todayStr     = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
                     const todaySales   = offlineSales.filter(s => s.order_date === todayStr);
                     const todayRev     = todaySales.reduce((s,x) => s+(parseFloat(x.sold_price)||0), 0);
-                    const thisMonth    = new Date().toISOString().slice(0,7);
+                    const thisMonth    = `${now.getFullYear()}-${pad(now.getMonth() + 1)}`;
                     const monthSales   = offlineSales.filter(s => (s.order_date||'').startsWith(thisMonth));
                     const monthRev     = monthSales.reduce((s,x) => s+(parseFloat(x.sold_price)||0), 0);
                     const catColors    = ['#216DB2','#3D3A86','#68408D','#B94F8C','#16a34a','#0284c7'];
@@ -1530,25 +1577,69 @@ export default function Admin() {
                       <div>
                         <div style={{ background: 'linear-gradient(135deg, #172A72 0%, #3D3A86 45%, #68408D 100%)', borderRadius: '14px', padding: '20px 24px', color: '#fff', marginBottom: '12px', boxShadow: '0 8px 24px rgba(61,58,134,0.22)', display: 'flex', flexWrap: 'wrap', gap: '20px', alignItems: 'center', justifyContent: 'space-between' }}>
                           <div>
-                            <div style={{ fontSize: '11px', fontWeight: 800, color: '#93C5FD', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>🧾 Offline Sales Overview</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '4px' }}>
+                              <div style={{ fontSize: '11px', fontWeight: 800, color: '#93C5FD', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                                {isOfflineFiltered ? '🧾 Filtered Offline Sales' : '🧾 Offline Sales Overview'}
+                              </div>
+                              {isOfflineFiltered && (
+                                <span style={{
+                                  fontSize: '11px',
+                                  fontWeight: 800,
+                                  background: 'rgba(255, 255, 255, 0.18)',
+                                  color: '#FDE047',
+                                  padding: '2px 9px',
+                                  borderRadius: '12px',
+                                  border: '1px solid rgba(253, 224, 71, 0.45)',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px'
+                                }}>
+                                  <span>📅 {getOfflineDateFilterLabel()}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => { setOfflineDateFilter('all'); setOfflineCustomStart(''); setOfflineCustomEnd(''); setOfflineCategoryFilter('all'); setOfflineSearch(''); }}
+                                    title="Reset filters"
+                                    style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', padding: '0 2px', fontSize: '11px', fontWeight: 900, lineHeight: 1 }}
+                                  >
+                                    ✕
+                                  </button>
+                                </span>
+                              )}
+                            </div>
                             <div style={{ fontSize: '28px', fontWeight: 900, letterSpacing: '-0.02em' }}>NPR {totalRev.toLocaleString()}</div>
-                            <div style={{ fontSize: '12.5px', color: '#E2E8F0', marginTop: '3px' }}>{offlineSales.length} sale{offlineSales.length!==1?'s':''} · Avg NPR {Math.round(avgSold).toLocaleString()}</div>
+                            <div style={{ fontSize: '12.5px', color: '#E2E8F0', marginTop: '3px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                              <span>{displaySales.length} sale{displaySales.length!==1?'s':''} in period · Avg NPR {Math.round(avgSold).toLocaleString()}</span>
+                              {isOfflineFiltered && (
+                                <span style={{ color: '#93C5FD', fontSize: '11.5px' }}>
+                                  · Total in Catalog: {offlineSales.length} sales (NPR {allTimeRev.toLocaleString()})
+                                </span>
+                              )}
+                            </div>
                           </div>
                           <div className="admin-hero-counters">
                             <div style={{ textAlign: 'center' }}><div style={{ fontSize: '20px', fontWeight: 800, color: '#4ADE80' }}>NPR {totalProfit.toLocaleString()}</div><div style={{ fontSize: '10px', color: '#93C5FD', fontWeight: 700 }}>NET PROFIT</div></div>
                             <div style={{ textAlign: 'center' }}><div style={{ fontSize: '20px', fontWeight: 800, color: '#FCD34D' }}>{profitMargin}%</div><div style={{ fontSize: '10px', color: '#93C5FD', fontWeight: 700 }}>MARGIN</div></div>
-                            <div style={{ textAlign: 'center' }}><div style={{ fontSize: '20px', fontWeight: 800, color: '#F472B6' }}>NPR {todayRev.toLocaleString()}</div><div style={{ fontSize: '10px', color: '#93C5FD', fontWeight: 700 }}>TODAY</div></div>
-                            <div style={{ textAlign: 'center' }}><div style={{ fontSize: '20px', fontWeight: 800, color: '#A5F3FC' }}>NPR {monthRev.toLocaleString()}</div><div style={{ fontSize: '10px', color: '#93C5FD', fontWeight: 700 }}>THIS MONTH</div></div>
+                            {isOfflineFiltered ? (
+                              <>
+                                <div style={{ textAlign: 'center' }}><div style={{ fontSize: '20px', fontWeight: 800, color: '#F472B6' }}>NPR {totalCost.toLocaleString()}</div><div style={{ fontSize: '10px', color: '#93C5FD', fontWeight: 700 }}>TOTAL COST</div></div>
+                                <div style={{ textAlign: 'center' }}><div style={{ fontSize: '20px', fontWeight: 800, color: '#A5F3FC' }}>{displaySales.length}</div><div style={{ fontSize: '10px', color: '#93C5FD', fontWeight: 700 }}>SALES COUNT</div></div>
+                              </>
+                            ) : (
+                              <>
+                                <div style={{ textAlign: 'center' }}><div style={{ fontSize: '20px', fontWeight: 800, color: '#F472B6' }}>NPR {todayRev.toLocaleString()}</div><div style={{ fontSize: '10px', color: '#93C5FD', fontWeight: 700 }}>TODAY</div></div>
+                                <div style={{ textAlign: 'center' }}><div style={{ fontSize: '20px', fontWeight: 800, color: '#A5F3FC' }}>NPR {monthRev.toLocaleString()}</div><div style={{ fontSize: '10px', color: '#93C5FD', fontWeight: 700 }}>THIS MONTH</div></div>
+                              </>
+                            )}
                           </div>
                         </div>
                         <div className="admin-offline-stats-grid">
                           {[
-                            { label: 'Total Revenue', val: `NPR ${totalRev.toLocaleString()}`,    color: '#216DB2', icon: '💰' },
-                            { label: 'Total Cost',    val: `NPR ${totalCost.toLocaleString()}`,   color: '#B94F8C', icon: '📦' },
-                            { label: 'Net Profit',    val: `NPR ${totalProfit.toLocaleString()}`, color: '#16a34a', icon: '📈' },
-                            { label: 'Today Sales',   val: todaySales.length,                     color: '#3D3A86', icon: '📅' },
-                            { label: 'Month Sales',   val: monthSales.length,                     color: '#0284c7', icon: '🗓️' },
-                            { label: 'Top Category',  val: topCat ? topCat[0] : '—',             color: '#68408D', icon: '🏆' },
+                            { label: isOfflineFiltered ? 'Period Revenue' : 'Total Revenue', val: `NPR ${totalRev.toLocaleString()}`,    color: '#216DB2', icon: '💰' },
+                            { label: isOfflineFiltered ? 'Period Cost' : 'Total Cost',       val: `NPR ${totalCost.toLocaleString()}`,   color: '#B94F8C', icon: '📦' },
+                            { label: isOfflineFiltered ? 'Period Net Profit' : 'Net Profit', val: `NPR ${totalProfit.toLocaleString()}`, color: '#16a34a', icon: '📈' },
+                            { label: isOfflineFiltered ? 'Filtered Sales' : 'Today Sales',   val: isOfflineFiltered ? `${displaySales.length} sales` : todaySales.length, color: '#3D3A86', icon: isOfflineFiltered ? '📋' : '📅' },
+                            { label: isOfflineFiltered ? 'Avg Sale Value' : 'Month Sales',   val: isOfflineFiltered ? `NPR ${Math.round(avgSold).toLocaleString()}` : monthSales.length, color: '#0284c7', icon: isOfflineFiltered ? '💳' : '🗓️' },
+                            { label: isOfflineFiltered ? 'Top Category (Period)' : 'Top Category', val: topCat ? `${topCat[0]} (${topCat[1]})` : '—', color: '#68408D', icon: '🏆' },
                           ].map(card => (
                             <div key={card.label} className="admin-stat-card" style={{ borderRadius: '10px', padding: '12px 12px', border: '1px solid var(--color-border-light)' }}>
                               <div style={{ fontSize: '18px', marginBottom: '4px' }}>{card.icon}</div>
@@ -1558,13 +1649,19 @@ export default function Admin() {
                           ))}
                         </div>
                         <div style={{ background: 'var(--color-surface)', borderRadius: '10px', padding: '12px 16px', border: '1px solid var(--color-border-light)', display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
-                          <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', flexShrink: 0 }}>By Category:</span>
-                          {Object.entries(catBreakdown).sort((a,b)=>b[1]-a[1]).map(([cat, cnt], i) => (
-                            <span key={cat} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'var(--color-white)', border: '1px solid var(--color-border)', borderRadius: '20px', padding: '4px 12px', fontSize: '12px', fontWeight: 700, color: 'var(--color-dark)' }}>
-                              <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: catColors[i%catColors.length], flexShrink: 0 }} />
-                              {cat} <span style={{ color: catColors[i%catColors.length], fontWeight: 900 }}>({cnt})</span>
-                            </span>
-                          ))}
+                          <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', flexShrink: 0 }}>
+                            {isOfflineFiltered ? 'By Category (Filtered):' : 'By Category:'}
+                          </span>
+                          {Object.entries(catBreakdown).length === 0 ? (
+                            <span style={{ fontSize: '12px', color: 'var(--color-text-muted)', fontStyle: 'italic' }}>No sales matching current filter</span>
+                          ) : (
+                            Object.entries(catBreakdown).sort((a,b)=>b[1]-a[1]).map(([cat, cnt], i) => (
+                              <span key={cat} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'var(--color-white)', border: '1px solid var(--color-border)', borderRadius: '20px', padding: '4px 12px', fontSize: '12px', fontWeight: 700, color: 'var(--color-dark)' }}>
+                                <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: catColors[i%catColors.length], flexShrink: 0 }} />
+                                {cat} <span style={{ color: catColors[i%catColors.length], fontWeight: 900 }}>({cnt})</span>
+                              </span>
+                            ))
+                          )}
                         </div>
                       </div>
                     );
@@ -1617,8 +1714,10 @@ export default function Admin() {
                       >
                         <option value="all">All Dates</option>
                         <option value="today">Today</option>
-                        <option value="week">This Week</option>
+                        <option value="yesterday">Yesterday</option>
+                        <option value="week">This Week (Last 7 Days)</option>
                         <option value="month">This Month</option>
+                        <option value="last30">Last 30 Days</option>
                         <option value="custom">Custom Date Range</option>
                       </select>
                     </div>
@@ -1663,6 +1762,47 @@ export default function Admin() {
                     </div>
                   </div>
 
+                  {/* Sales Records Count Summary Bar */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', marginTop: '14px', flexWrap: 'wrap', gap: '10px' }}>
+                    <div style={{ fontSize: '13.5px', fontWeight: 700, color: 'var(--color-dark)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span>Sales Records</span>
+                      <span style={{
+                        fontSize: '11.5px',
+                        fontWeight: 800,
+                        background: 'rgba(33, 109, 178, 0.12)',
+                        color: 'var(--color-blue)',
+                        padding: '2px 9px',
+                        borderRadius: '12px'
+                      }}>
+                        {filteredOfflineSales.length} {filteredOfflineSales.length === 1 ? 'sale' : 'sales'}
+                        {filteredOfflineSales.length !== offlineSales.length && ` (of ${offlineSales.length} total)`}
+                      </span>
+                    </div>
+                    {filteredOfflineSales.length !== offlineSales.length && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOfflineSearch('');
+                          setOfflineCategoryFilter('all');
+                          setOfflineDateFilter('all');
+                          setOfflineCustomStart('');
+                          setOfflineCustomEnd('');
+                        }}
+                        style={{
+                          fontSize: '12px',
+                          color: 'var(--color-blue)',
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          fontWeight: 700,
+                          padding: 0
+                        }}
+                      >
+                        Clear all filters
+                      </button>
+                    )}
+                  </div>
+
                   {/* Offline Sales List / Table */}
                   {loadingOfflineSales ? (
                     <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--color-text-muted)' }}>Loading offline sales...</div>
@@ -1683,9 +1823,10 @@ export default function Admin() {
                     </div>
                   ) : (
                     <div className="admin-table-container">
-                      <table style={{ width: '100%', minWidth: '820px' }}>
+                      <table style={{ width: '100%', minWidth: '850px' }}>
                         <thead>
                           <tr>
+                            <th style={{ width: '48px', textAlign: 'center', whiteSpace: 'nowrap' }}>S.N.</th>
                             <th style={{ minWidth: '95px' }}>Date</th>
                             <th style={{ minWidth: '150px' }}>Customer</th>
                             <th style={{ minWidth: '130px' }}>Frame</th>
@@ -1698,8 +1839,12 @@ export default function Admin() {
                           </tr>
                         </thead>
                         <tbody>
-                          {filteredOfflineSales.map(sale => {
-                            const profitVal = parseFloat(sale.profit) || 0;
+                          {filteredOfflineSales.map((sale, index) => {
+                            const costVal = parseFloat(sale.cost_price) || 0;
+                            const deliveryVal = parseFloat(sale.delivery_charge) || 0;
+                            const totalCostVal = costVal + deliveryVal;
+                            const soldVal = parseFloat(sale.sold_price) || 0;
+                            const profitVal = soldVal - totalCostVal;
                             const categoryMap = {
                               'photo-frames': 'Photo Frames',
                               'wedding-frames': 'Wedding Frames',
@@ -1712,8 +1857,11 @@ export default function Admin() {
 
                             return (
                               <tr key={sale.id} className="admin-table-row">
+                                <td style={{ textAlign: 'center', fontWeight: 700, color: 'var(--color-text-muted)', fontSize: '12.5px' }}>
+                                  {index + 1}
+                                </td>
                                 <td style={{ whiteSpace: 'nowrap', fontWeight: 600, color: 'var(--color-dark)' }}>
-                                  {sale.order_date ? new Date(sale.order_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}
+                                  {sale.order_date ? new Date(sale.order_date + 'T12:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}
                                 </td>
                                 <td style={{ fontWeight: 700, color: 'var(--color-primary-navy)' }}>
                                   {sale.customer_name}
@@ -1729,11 +1877,16 @@ export default function Admin() {
                                     {catLabel}
                                   </span>
                                 </td>
-                                <td style={{ textAlign: 'right', color: 'var(--color-text-muted)' }}>
-                                  NPR {(parseFloat(sale.cost_price) || 0).toLocaleString()}
+                                <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                                  <div style={{ fontWeight: 700, color: 'var(--color-dark)', fontSize: '13px' }}>
+                                    NPR {totalCostVal.toLocaleString()}
+                                  </div>
+                                  <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '2px', fontWeight: 600 }}>
+                                    🚚 NPR {deliveryVal.toLocaleString()}
+                                  </div>
                                 </td>
                                 <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-dark)' }}>
-                                  NPR {(parseFloat(sale.sold_price) || 0).toLocaleString()}
+                                  NPR {soldVal.toLocaleString()}
                                 </td>
                                 <td style={{ textAlign: 'right', fontWeight: 800, color: profitVal >= 0 ? '#16a34a' : '#dc2626' }}>
                                   NPR {profitVal.toLocaleString()}
@@ -1864,6 +2017,7 @@ export default function Admin() {
                     <table style={{ width: '100%', minWidth: '820px' }}>
                       <thead>
                         <tr>
+                          <th style={{ width: '48px', textAlign: 'center' }}>S.N.</th>
                           <th style={{ minWidth: '180px' }}>Product</th>
                           <th style={{ minWidth: '110px' }}>Category</th>
                           <th style={{ minWidth: '90px' }}>Price</th>
@@ -1875,8 +2029,11 @@ export default function Admin() {
                         </tr>
                       </thead>
                       <tbody>
-                        {adminFilteredProducts.map(p => (
+                        {adminFilteredProducts.map((p, index) => (
                           <tr key={p.id} style={{ background: p.isAvailable ? 'var(--color-white)' : '#fafafa' }}>
+                            <td style={{ textAlign: 'center', fontWeight: 700, color: 'var(--color-text-muted)', fontSize: '12.5px' }}>
+                              {index + 1}
+                            </td>
                             {/* Product image + name */}
                             <td>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -2016,6 +2173,7 @@ export default function Admin() {
                     <table style={{ width: '100%', minWidth: '680px' }}>
                       <thead>
                         <tr>
+                          <th style={{ width: '48px', textAlign: 'center' }}>S.N.</th>
                           <th style={{ minWidth: '140px' }}>Name</th>
                           <th style={{ minWidth: '170px' }}>Email</th>
                           <th style={{ minWidth: '120px' }}>Phone</th>
@@ -2036,6 +2194,9 @@ export default function Admin() {
                           }, {})
                         ).map((c, idx) => (
                           <tr key={idx}>
+                            <td style={{ textAlign: 'center', fontWeight: 700, color: 'var(--color-text-muted)', fontSize: '12.5px' }}>
+                              {idx + 1}
+                            </td>
                             <td style={{ fontWeight: 600, color: 'var(--color-dark)' }}>{c.name}</td>
                             <td style={{ color: 'var(--color-text-muted)' }}>{c.email}</td>
                             <td style={{ color: 'var(--color-text-muted)' }}>{c.phone}</td>
@@ -2134,6 +2295,7 @@ export default function Admin() {
                     <table style={{ width: '100%', minWidth: '680px' }}>
                       <thead>
                         <tr>
+                          <th style={{ width: '48px', textAlign: 'center' }}>S.N.</th>
                           <th style={{ minWidth: '120px' }}>Code</th>
                           <th style={{ minWidth: '90px' }}>Discount</th>
                           <th style={{ minWidth: '90px' }}>Min Order</th>
@@ -2144,11 +2306,14 @@ export default function Admin() {
                         </tr>
                       </thead>
                       <tbody>
-                        {coupons.map(coupon => {
+                        {coupons.map((coupon, index) => {
                           const isExpired = coupon.expires_at && new Date(coupon.expires_at) < new Date();
                           const isMaxed = coupon.max_uses !== null && coupon.usage_count >= coupon.max_uses;
                           return (
                             <tr key={coupon.id} style={{ opacity: (!coupon.is_active || isExpired || isMaxed) ? 0.65 : 1 }}>
+                              <td style={{ textAlign: 'center', fontWeight: 700, color: 'var(--color-text-muted)', fontSize: '12.5px' }}>
+                                {index + 1}
+                              </td>
                               <td>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
                                   <span style={{ fontFamily: 'monospace', fontWeight: 800, color: 'var(--color-primary-navy)', fontSize: '14px', letterSpacing: '0.05em' }}>{coupon.code}</span>
@@ -3047,19 +3212,31 @@ export default function Admin() {
                 </div>
               </div>
 
-              {/* Cost Price & Sold Price */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px', marginBottom: '14px' }}>
+              {/* Cost Price, Delivery Charge & Sold Price */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '14px', marginBottom: '14px' }}>
                 <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label">Cost Price (NPR) *</label>
+                  <label className="form-label">Frame Cost (NPR) *</label>
                   <input
                     type="number"
                     min="0"
                     step="any"
                     className="form-input"
-                    placeholder="e.g. 1000"
+                    placeholder="e.g. 255"
                     value={offlineForm.cost_price}
                     onChange={e => setOfflineForm(f => ({ ...f, cost_price: e.target.value }))}
                     required
+                  />
+                </div>
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label className="form-label">🚚 Delivery Charge (NPR)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    className="form-input"
+                    placeholder="e.g. 100 (0 if free)"
+                    value={offlineForm.delivery_charge}
+                    onChange={e => setOfflineForm(f => ({ ...f, delivery_charge: e.target.value }))}
                   />
                 </div>
                 <div className="form-group" style={{ margin: 0 }}>
@@ -3069,7 +3246,7 @@ export default function Admin() {
                     min="0"
                     step="any"
                     className="form-input"
-                    placeholder="e.g. 1500"
+                    placeholder="e.g. 500"
                     value={offlineForm.sold_price}
                     onChange={e => setOfflineForm(f => ({ ...f, sold_price: e.target.value }))}
                     required
@@ -3079,26 +3256,41 @@ export default function Admin() {
 
               {/* Automatic Profit Calculation Display */}
               {(() => {
-                const cost = parseFloat(offlineForm.cost_price);
+                const cost = parseFloat(offlineForm.cost_price) || 0;
+                const delivery = parseFloat(offlineForm.delivery_charge) || 0;
                 const sold = parseFloat(offlineForm.sold_price);
-                const hasValidNumbers = !isNaN(cost) && !isNaN(sold);
-                const profit = hasValidNumbers ? (sold - cost) : 0;
+                const totalCost = cost + delivery;
+                const hasValidSold = !isNaN(sold);
+                const hasValidCost = offlineForm.cost_price !== '' && !isNaN(cost);
+                const profit = (hasValidSold && hasValidCost) ? (sold - totalCost) : 0;
                 return (
                   <div style={{
-                    background: hasValidNumbers ? (profit >= 0 ? '#f0fdf4' : '#fef2f2') : 'var(--color-surface)',
-                    border: `1px solid ${hasValidNumbers ? (profit >= 0 ? '#bbf7d0' : '#fecaca') : 'var(--color-border-light)'}`,
+                    background: (hasValidSold && hasValidCost) ? (profit >= 0 ? '#f0fdf4' : '#fef2f2') : 'var(--color-surface)',
+                    border: `1px solid ${(hasValidSold && hasValidCost) ? (profit >= 0 ? '#bbf7d0' : '#fecaca') : 'var(--color-border-light)'}`,
                     borderRadius: '10px',
                     padding: '12px 16px',
                     marginBottom: '16px',
                     display: 'flex',
-                    justify: 'space-between',
-                    alignItems: 'center'
+                    flexWrap: 'wrap',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    gap: '10px'
                   }}>
-                    <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-dark)' }}>
-                      Automated Profit Calculation:
-                    </span>
-                    <span style={{ fontSize: '16px', fontWeight: 900, color: hasValidNumbers ? (profit >= 0 ? '#15803d' : '#dc2626') : 'var(--color-text-muted)' }}>
-                      Profit: NPR {hasValidNumbers ? profit.toLocaleString() : '0'}
+                    <div>
+                      <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-dark)' }}>
+                        Total Cost: NPR {totalCost.toLocaleString()}
+                        {delivery > 0 && (
+                          <span style={{ fontSize: '11.5px', fontWeight: 600, color: 'var(--color-text-muted)', marginLeft: '6px' }}>
+                            (Frame: NPR {cost.toLocaleString()} + 🚚 Delivery: NPR {delivery.toLocaleString()})
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: '11.5px', color: 'var(--color-text-muted)', marginTop: '2px' }}>
+                        Automated Profit = Sold Price − (Frame Cost + Delivery Charge)
+                      </div>
+                    </div>
+                    <span style={{ fontSize: '16px', fontWeight: 900, color: (hasValidSold && hasValidCost) ? (profit >= 0 ? '#15803d' : '#dc2626') : 'var(--color-text-muted)' }}>
+                      Profit: NPR {(hasValidSold && hasValidCost) ? profit.toLocaleString() : '0'}
                     </span>
                   </div>
                 );

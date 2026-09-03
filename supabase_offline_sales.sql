@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS public.offline_sales (
     frame_name TEXT NOT NULL,
     category TEXT NOT NULL DEFAULT 'photo-frames',
     cost_price NUMERIC NOT NULL DEFAULT 0,
+    delivery_charge NUMERIC NOT NULL DEFAULT 0,
     sold_price NUMERIC NOT NULL DEFAULT 0,
     profit NUMERIC NOT NULL DEFAULT 0,
     photo_url TEXT,
@@ -19,8 +20,9 @@ CREATE TABLE IF NOT EXISTS public.offline_sales (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Migration for existing tables: Add category column if missing
+-- Migration for existing tables: Add category and delivery_charge columns if missing
 ALTER TABLE public.offline_sales ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'photo-frames';
+ALTER TABLE public.offline_sales ADD COLUMN IF NOT EXISTS delivery_charge NUMERIC DEFAULT 0;
 
 
 -- 2. Enable Row Level Security (RLS)
