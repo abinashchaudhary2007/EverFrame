@@ -319,6 +319,59 @@ export async function updateOrderStatus(orderId, newStatus, orderNumber) {
   return true;
 }
 
+// Delete an online order (Admin)
+export async function deleteOrder(orderId, orderNumber) {
+  // 1. Remove from localStorage
+  try {
+    const savedOrders = JSON.parse(localStorage.getItem('everframe_orders') || '[]');
+    const filtered = savedOrders.filter(o =>
+      String(o.id) !== String(orderId) &&
+      (!orderNumber || String(o.order_number) !== String(orderNumber))
+    );
+    localStorage.setItem('everframe_orders', JSON.stringify(filtered));
+
+    // Also clean up any status overrides for this order
+    const overrides = JSON.parse(localStorage.getItem('everframe_order_status_overrides') || '{}');
+    if (orderId && overrides[orderId]) delete overrides[orderId];
+    if (orderNumber && overrides[orderNumber]) delete overrides[orderNumber];
+    localStorage.setItem('everframe_order_status_overrides', JSON.stringify(overrides));
+  } catch (e) {
+    console.error('Local order delete error:', e);
+  }
+
+  // 2. Delete from Supabase
+  if (isSupabaseConfigured && supabase) {
+    try {
+      // First delete associated order items if orderId is available
+      if (orderId) {
+        await supabase.from('order_items').delete().eq('order_id', orderId);
+      }
+
+      // Delete the order itself by id
+      let { error } = await supabase.from('orders').delete().eq('id', orderId);
+
+      // If failed or no id matched, try deleting by order_number
+      if (error && orderNumber) {
+        const retry = await supabase.from('orders').delete().eq('order_number', orderNumber);
+        error = retry.error;
+      }
+
+      if (error) {
+        console.error('Supabase Delete Order Error:', error);
+      }
+    } catch (err) {
+      console.error('Supabase Delete Order Exception:', err);
+    }
+  }
+
+  // 3. Dispatch global event for instant UI sync across open tabs
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('everframe_order_updated', { detail: { deletedOrderId: orderId, deletedOrderNumber: orderNumber } }));
+  }
+
+  return { success: true };
+}
+
 // Track Single Order by Order Number
 export async function getOrderByNumber(orderNumber) {
   if (!orderNumber) return null;

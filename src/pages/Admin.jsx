@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
-  getAllOrders, updateOrderStatus, getAllCoupons, createCoupon, toggleCoupon, deleteCoupon,
+  getAllOrders, updateOrderStatus, deleteOrder, getAllCoupons, createCoupon, toggleCoupon, deleteCoupon,
   getContactSubmissions, markContactRead, getAdminProducts, createProduct, updateProduct, deleteProduct,
   toggleProductAvailability, toggleProductFeatured, getOfflineSales, createOfflineSale, updateOfflineSale, deleteOfflineSale
 } from '../services/api';
@@ -106,6 +106,8 @@ export default function Admin() {
   const [offlineFormError, setOfflineFormError] = useState('');
   const [deleteOfflineConfirm, setDeleteOfflineConfirm] = useState(null);
   const [deletingOffline, setDeletingOffline] = useState(false);
+  const [deleteOrderConfirm, setDeleteOrderConfirm] = useState(null);
+  const [deletingOrder, setDeletingOrder] = useState(false);
   const [previewPhotoUrl, setPreviewPhotoUrl] = useState(null);
   const [pinOrdersDash, setPinOrdersDash] = useState(true);
   const [pinOfflineDash, setPinOfflineDash] = useState(true);
@@ -336,6 +338,25 @@ export default function Admin() {
       toast.error('Failed to delete offline sale.');
     }
     setDeleteOfflineConfirm(null);
+  };
+
+  const handleConfirmDeleteOrder = async () => {
+    if (!deleteOrderConfirm) return;
+    setDeletingOrder(true);
+    const orderId = deleteOrderConfirm.id;
+    const orderNumber = deleteOrderConfirm.order_number;
+    const result = await deleteOrder(orderId, orderNumber);
+    setDeletingOrder(false);
+    if (result?.success) {
+      setOrders(prev => prev.filter(o => o.id !== orderId && (!orderNumber || o.order_number !== orderNumber)));
+      toast.success(`Order #${orderNumber || orderId} deleted.`, {
+        position: 'bottom-right',
+        style: { background: '#dc2626', color: '#fff', borderRadius: '8px' }
+      });
+    } else {
+      toast.error('Failed to delete order.');
+    }
+    setDeleteOrderConfirm(null);
   };
 
 
@@ -1494,11 +1515,35 @@ export default function Admin() {
                               ))}
                             </div>
                           )}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', paddingTop: '10px', borderTop: '1px solid var(--color-border-light)' }}>
-                            <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-dark)' }}>Update Status:</span>
-                            {['Order Placed', 'Confirmed', 'Preparing', 'Shipped', 'Delivered'].map(st => (
-                              <button key={st} className={`btn btn-sm ${order.order_status === st ? 'btn-primary' : 'btn-outline'}`} style={{ fontSize: '11.5px', padding: '5px 12px' }} onClick={() => handleStatusChange(order, st)}>{st}</button>
-                            ))}
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', paddingTop: '10px', borderTop: '1px solid var(--color-border-light)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                              <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-dark)' }}>Update Status:</span>
+                              {['Order Placed', 'Confirmed', 'Preparing', 'Shipped', 'Delivered'].map(st => (
+                                <button key={st} className={`btn btn-sm ${order.order_status === st ? 'btn-primary' : 'btn-outline'}`} style={{ fontSize: '11.5px', padding: '5px 12px' }} onClick={() => handleStatusChange(order, st)}>{st}</button>
+                              ))}
+                            </div>
+                            <button
+                              type="button"
+                              className="btn btn-sm"
+                              onClick={() => setDeleteOrderConfirm(order)}
+                              style={{
+                                fontSize: '11.5px',
+                                padding: '5px 12px',
+                                background: '#FFF1F2',
+                                color: '#E11D48',
+                                border: '1px solid #FECDD3',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '5px',
+                                cursor: 'pointer',
+                                borderRadius: '6px',
+                                fontWeight: 600,
+                                transition: 'all 0.15s ease'
+                              }}
+                              title={`Delete order #${num}`}
+                            >
+                              <Trash2 size={13} /> Delete
+                            </button>
                           </div>
                         </div>
                       );
@@ -3395,6 +3440,43 @@ export default function Admin() {
                 disabled={deletingOffline}
               >
                 {deletingOffline ? 'Deleting...' : 'Delete Offline Sale'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── DELETE ONLINE ORDER CONFIRMATION MODAL ───────────── */}
+      {deleteOrderConfirm && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(10,14,30,0.55)', backdropFilter: 'blur(4px)', zIndex: 1001, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
+          onClick={() => !deletingOrder && setDeleteOrderConfirm(null)}
+        >
+          <div
+            style={{ background: 'var(--color-white)', borderRadius: '16px', padding: '32px', maxWidth: '440px', width: '100%', boxShadow: '0 24px 64px rgba(0,0,0,0.22)', textAlign: 'center' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ width: '56px', height: '56px', background: '#fff1f2', borderRadius: '50%', margin: '0 auto 20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Trash2 size={24} color="#E11D48" />
+            </div>
+            <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', fontWeight: 700, marginBottom: '10px', color: 'var(--color-dark)' }}>Delete Online Order?</h3>
+            <p style={{ color: 'var(--color-text-muted)', fontSize: '14px', lineHeight: 1.6, marginBottom: '8px' }}>
+              Are you sure you want to permanently delete order <strong style={{ color: 'var(--color-dark)' }}>#{deleteOrderConfirm.order_number || deleteOrderConfirm.id}</strong> for <strong style={{ color: 'var(--color-dark)' }}>"{deleteOrderConfirm.customer_name}"</strong>?
+            </p>
+            <p style={{ color: '#E11D48', fontSize: '12.5px', marginBottom: '28px', fontWeight: 600 }}>
+              ⚠️ This will remove the order and its items permanently. This action cannot be undone.
+            </p>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button className="btn btn-outline" style={{ flex: 1 }} onClick={() => setDeleteOrderConfirm(null)} disabled={deletingOrder}>
+                Cancel
+              </button>
+              <button
+                className="btn"
+                style={{ flex: 1, background: '#E11D48', color: '#fff', border: 'none', cursor: 'pointer', padding: '10px', fontWeight: 700, borderRadius: '8px' }}
+                onClick={handleConfirmDeleteOrder}
+                disabled={deletingOrder}
+              >
+                {deletingOrder ? 'Deleting...' : 'Delete Order'}
               </button>
             </div>
           </div>

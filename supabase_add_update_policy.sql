@@ -7,3 +7,10 @@ CREATE POLICY "Allow public order update" ON public.orders FOR UPDATE USING (tru
 -- Also allow order_items select for track order feature
 DROP POLICY IF EXISTS "Allow public order_items selection" ON public.order_items;
 CREATE POLICY "Allow public order_items selection" ON public.order_items FOR SELECT USING (true);
+
+-- Allow admin to DELETE orders and order_items
+DROP POLICY IF EXISTS "Allow public order deletion" ON public.orders;
+CREATE POLICY "Allow public order deletion" ON public.orders FOR DELETE USING (true);
+
+DROP POLICY IF EXISTS "Allow public order_items deletion" ON public.order_items;
+CREATE POLICY "Allow public order_items deletion" ON public.order_items FOR DELETE USING (true);
