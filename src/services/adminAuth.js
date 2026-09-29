@@ -33,14 +33,22 @@ export async function hashPassword(password, salt) {
  * Retrieve current admin credentials metadata from Supabase or LocalStorage
  */
 export async function getAdminCredentials() {
-  // 1. Try Supabase if configured
+  // 1. Try Supabase if configured (timeout after 1500ms to avoid blocking when Supabase is offline/unreachable)
   if (isSupabaseConfigured && supabase) {
     try {
-      const { data, error } = await supabase
+      const fetchPromise = supabase
         .from('admin_settings')
         .select('*')
         .eq('id', 'admin_auth')
         .maybeSingle();
+
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Supabase connection timeout')), 1500)
+      );
+
+      const res = await Promise.race([fetchPromise, timeoutPromise]);
+      const data = res?.data;
+      const error = res?.error;
 
       if (!error && data && data.password_hash && data.salt) {
         // Cache to localStorage for fast fallback
@@ -48,7 +56,7 @@ export async function getAdminCredentials() {
         return data;
       }
     } catch {
-      // Fall through to localStorage
+      // Fall through to localStorage immediately
     }
   }
 
